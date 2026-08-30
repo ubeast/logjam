@@ -351,6 +351,44 @@
     @keyframes draw { to { stroke-dashoffset: 0; } }
     @keyframes fade { to { opacity: 1; } }
   }
+
+  /* ---- print / PDF ---- */
+  @page { margin: 16mm 14mm; }
+  @media print {
+    :root {
+      /* force the light palette regardless of viewer/OS theme */
+      --paper: #ffffff; --surface: #f6f8f8; --surface-2: #ffffff;
+      --ink: #15211f; --ink-2: #3f5054; --ink-3: #6b7a7d;
+      --hairline: #cdd6d8; --rule: #aab6b8;
+      --chart-surface: #ffffff;
+    }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { font-size: 10.5pt; line-height: 1.5; background: #fff; }
+    .wrap { max-width: none; padding: 0; }
+    .statusbar { position: static; backdrop-filter: none; border-bottom: 1px solid var(--rule); }
+    .statusbar .wrap { min-height: 0; padding: 6pt 0; }
+    .tooltip { display: none !important; }
+    .draw { stroke-dasharray: none !important; stroke-dashoffset: 0 !important; animation: none !important; }
+    .fade-area { opacity: 1 !important; animation: none !important; }
+    .hit { display: none; }
+
+    header.masthead { padding: 18pt 0 12pt; }
+    h1 { font-size: 26pt; max-width: none; }
+    .dek { font-size: 13pt; }
+    section { padding: 14pt 0; }
+    h2 { font-size: 16pt; }
+
+    /* keep visual units whole across page breaks */
+    figure, .callout { break-inside: avoid; }
+    .tiles { grid-template-columns: 1fr 1fr; break-inside: avoid; }
+    .sec-head { break-after: avoid; }
+    h2, h3, dt { break-after: avoid; }
+    figure { box-shadow: none; }
+    thead th { position: static; }
+    td:first-child { white-space: nowrap; }
+    a { color: var(--ink); text-decoration: none; }
+    footer.colophon { padding: 12pt 0 0; }
+  }
 </style>
 
 <div class="statusbar">
@@ -369,7 +407,8 @@
     <h1>Container traffic through the Strait of Hormuz has run near zero since March</h1>
     <p class="dek">Five months on, box-ship transits sit at roughly one-tenth of their pre-crisis rate — and the cargo they would have carried has rerouted, not resumed.</p>
     <div class="byline">
-      <span><b>Prepared by</b> bottleneck-logistics (open-source)</span>
+      <span><b>By</b> Michael Schertz</span>
+      <span><b>Tooling</b> bottleneck-logistics (open-source)</span>
       <span><b>Generated</b> 30 Aug 2026</span>
       <span><b>Source</b> IMF PortWatch</span>
       <span><b>Method</b> see §&nbsp;Method &amp; provenance</span>
@@ -548,7 +587,7 @@
 
 <footer class="colophon">
   <div class="wrap">
-    bottleneck-logistics · open-source logistics bottleneck &amp; opportunity identifier<br />
+    Michael Schertz · built with bottleneck-logistics, an open-source logistics bottleneck &amp; opportunity identifier<br />
     Data © IMF PortWatch, used under its free public-use terms · Brief generated 30 Aug 2026<br />
     This document reports analysis of public shipping data. It is not affiliated with or endorsed by the IMF.
   </div>
@@ -739,9 +778,9 @@
     var mount = document.getElementById(mountId);
     var rowH = 30, padTop = 10, padBottom = 28;
     var W = 860, H = padTop + rows.length * rowH + padBottom;
-    var labelW = 148, valW = 96;
+    var labelW = 150, valW = 104;
     var plotL = labelW, plotW = W - labelW - valW;
-    var maxAbs = 120;
+    var maxAbs = 135;
     function X(v) { return plotL + (plotW * (v + maxAbs)) / (2 * maxAbs); }
 
     var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": "Percent change in container port calls by port, July 2026 versus pre-crisis baseline." });
@@ -770,13 +809,19 @@
       nm.textContent = r.name;
       svg.appendChild(nm);
 
-      var pv = el("text", { x: pos ? x1 + 8 : x1 - 8, y: cy + 4, "text-anchor": pos ? "start" : "end", class: "tick" });
-      pv.setAttribute("fill", color);
+      var inside = pos && x1 > plotL + plotW - 52;  // long bar: label sits inside
+      var pv = el("text", {
+        x: inside ? x1 - 7 : (pos ? x1 + 8 : x1 - 8),
+        y: cy + 4,
+        "text-anchor": inside ? "end" : (pos ? "start" : "end"),
+        class: "tick"
+      });
+      pv.setAttribute("fill", inside ? "#ffffff" : color);
       pv.setAttribute("font-weight", "500");
       pv.textContent = (pos ? "+" : "") + r.pct + "%";
       svg.appendChild(pv);
 
-      var abs = el("text", { x: W - 10, y: cy + 4, "text-anchor": "end", class: "tick" });
+      var abs = el("text", { x: W - 6, y: cy + 4, "text-anchor": "end", class: "tick" });
       abs.textContent = r.a.toFixed(1) + " → " + r.b.toFixed(1);
       svg.appendChild(abs);
 
