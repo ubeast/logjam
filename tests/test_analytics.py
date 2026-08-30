@@ -8,6 +8,7 @@ import pandas as pd
 
 from bottleneck_logistics.analytics.baseline import compute_baselines
 from bottleneck_logistics.analytics.detect import detect_bottlenecks
+from bottleneck_logistics.analytics.recovery import SEVERE, recovery_status
 from bottleneck_logistics.store.loaders import upsert_observations
 
 
@@ -57,3 +58,51 @@ def test_stable_series_produces_no_bottleneck(con) -> None:
     upsert_observations(con, _series("port2", "Beta", values, "portcalls"))
     compute_baselines(con)
     assert detect_bottlenecks(con) == 0
+
+
+def _long_series(
+    entity_id: str, name: str, values: list[float], metric: str
+) -> pd.DataFrame:
+    """Like _series but starting far enough back for a year-over-year lookup."""
+    start = dt.date.today() - dt.timedelta(days=len(values))
+    return pd.DataFrame(
+        {
+            "entity_type": "chokepoint",
+            "entity_id": entity_id,
+            "entity_name": name,
+            "country": None,
+            "iso3": None,
+            "date": [start + dt.timedelta(days=i) for i in range(len(values))],
+            "metric": metric,
+            "value": values,
+        }
+    )
+
+
+def test_sustained_collapse_still_flags_via_year_over_year(con) -> None:
+    # ~14 months normal at ~60, then ~5 months collapsed at ~4 and holding.
+    # The 56-day short baseline heals around the new low; YoY must keep flagging.
+    normal = [60.0, 58.0, 62.0, 59.0, 61.0] * 84       # 420 days
+    collapsed = [4.0, 3.0, 5.0, 4.0, 4.0] * 30          # 150 days
+    upsert_observations(con, _long_series("chokepoint6", "Strait of Hormuz",
+                                          normal + collapsed, "n_total"))
+    compute_baselines(con)
+
+    latest = con.execute(
+        "SELECT robust_z, robust_z_yoy, pct_of_yoy FROM baseline "
+        "WHERE metric='n_total' ORDER BY obs_date DESC LIMIT 1"
+    ).fetchone()
+    assert latest[0] > -2.0            # short baseline has healed
+    assert latest[1] <= -2.0           # YoY still deeply negative
+    assert latest[2] < 0.2             # running below 20% of a year ago
+
+    assert detect_bottlenecks(con) >= 1
+    trig = con.execute(
+        "SELECT detail FROM signal WHERE signal_type='bottleneck' "
+        "ORDER BY obs_date DESC LIMIT 1"
+    ).fetchone()[0]
+    assert '"trigger": "yoy"' in trig
+
+    rec = recovery_status(con, "hormuz")
+    assert rec and rec[0].verdict == SEVERE
+    assert rec[0].pct_of_yoy is not None and rec[0].pct_of_yoy < 0.2

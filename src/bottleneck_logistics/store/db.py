@@ -31,17 +31,24 @@ CREATE TABLE IF NOT EXISTS observation (
 CREATE INDEX IF NOT EXISTS observation_date_idx ON observation (obs_date);
 CREATE INDEX IF NOT EXISTS observation_entity_idx ON observation (entity_type, entity_id, metric);
 
--- Rolling per-series baseline, recomputed by analytics.baseline.
+-- Per-series baseline, recomputed by analytics.baseline. Carries two
+-- baselines: a short trailing window (onset detection) and a year-over-year
+-- comparison (sustained-regime / recovery detection). YoY columns are NULL
+-- until a series has ~1 year of prior history.
 CREATE TABLE IF NOT EXISTS baseline (
     entity_type   TEXT   NOT NULL,
     entity_id     TEXT   NOT NULL,
     metric        TEXT   NOT NULL,
     obs_date      DATE   NOT NULL,
     value         DOUBLE NOT NULL,     -- the actual observed value that day
-    expected      DOUBLE NOT NULL,     -- trailing median
-    scale         DOUBLE NOT NULL,     -- trailing MAD (scaled to ~sigma)
+    expected      DOUBLE NOT NULL,     -- short trailing median
+    scale         DOUBLE NOT NULL,     -- short trailing MAD (scaled to ~sigma)
     robust_z      DOUBLE NOT NULL,     -- (value - expected) / scale
     n_obs         INTEGER NOT NULL,
+    expected_yoy  DOUBLE,              -- median around the same date ~1yr earlier
+    robust_z_yoy  DOUBLE,              -- (value - expected_yoy) / scale
+    pct_of_yoy    DOUBLE,              -- value / expected_yoy
+    n_obs_yoy     INTEGER,
     computed_at   TIMESTAMP NOT NULL DEFAULT now(),
     PRIMARY KEY (entity_type, entity_id, metric, obs_date)
 );
@@ -71,8 +78,19 @@ def connect(db_path: Path | None = None, *, read_only: bool = False) -> duckdb.D
     return duckdb.connect(str(path), read_only=read_only)
 
 
+# Additive migrations for databases created by an earlier schema version.
+# DuckDB's ADD COLUMN IF NOT EXISTS makes these safe to run every startup.
+_MIGRATIONS_SQL = """
+ALTER TABLE baseline ADD COLUMN IF NOT EXISTS expected_yoy DOUBLE;
+ALTER TABLE baseline ADD COLUMN IF NOT EXISTS robust_z_yoy DOUBLE;
+ALTER TABLE baseline ADD COLUMN IF NOT EXISTS pct_of_yoy DOUBLE;
+ALTER TABLE baseline ADD COLUMN IF NOT EXISTS n_obs_yoy INTEGER;
+"""
+
+
 def init_schema(con: duckdb.DuckDBPyConnection) -> None:
     con.execute(_SCHEMA_SQL)
+    con.execute(_MIGRATIONS_SQL)
 
 
 def latest_observation_date(

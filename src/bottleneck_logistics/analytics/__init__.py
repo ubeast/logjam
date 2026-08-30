@@ -15,5 +15,11 @@ group-relative positive z on an alternative port == spare capacity is moving
 from bottleneck_logistics.analytics.baseline import compute_baselines
 from bottleneck_logistics.analytics.detect import detect_bottlenecks
 from bottleneck_logistics.analytics.opportunity import detect_opportunities
+from bottleneck_logistics.analytics.recovery import recovery_status
 
-__all__ = ["compute_baselines", "detect_bottlenecks", "detect_opportunities"]
+__all__ = [
+    "compute_baselines",
+    "detect_bottlenecks",
+    "detect_opportunities",
+    "recovery_status",
+]

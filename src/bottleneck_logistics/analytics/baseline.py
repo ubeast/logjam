@@ -129,4 +129,51 @@ def compute_baselines(con: duckdb.DuckDBPyConnection) -> int:
     finally:
         con.unregister("staged_baseline")
 
+    _fill_yoy_baseline(con)
     return len(result)
+
+
+def _fill_yoy_baseline(con: duckdb.DuckDBPyConnection) -> None:
+    """Fill the year-over-year columns on ``baseline`` in a single SQL pass.
+
+    For each baseline row, ``expected_yoy`` is the median observed value in a
+    +/- ``yoy_halfwidth_days`` window centred ``yoy_lag_days`` before that row's
+    date. Rows with fewer than ``yoy_min_observations`` year-ago points keep
+    NULL YoY columns.
+
+    Performance: this is a range self-join of ``observation`` (millions of rows)
+    against ``baseline``. On a weekly refresh that is a few seconds to low tens
+    of seconds; it is the heaviest single statement in the pipeline.
+    """
+    lag = settings.yoy_lag_days
+    hw = settings.yoy_halfwidth_days
+    min_obs = settings.yoy_min_observations
+
+    con.execute(
+        """
+        UPDATE baseline b
+        SET expected_yoy = sub.med,
+            n_obs_yoy    = sub.n,
+            robust_z_yoy = CASE WHEN b.scale > 0
+                                THEN (b.value - sub.med) / b.scale END,
+            pct_of_yoy   = CASE WHEN sub.med > 0
+                                THEN b.value / sub.med END
+        FROM (
+            SELECT b2.entity_type, b2.entity_id, b2.metric, b2.obs_date,
+                   median(o.value) AS med, count(*) AS n
+            FROM baseline b2
+            JOIN observation o
+              ON o.entity_type = b2.entity_type
+             AND o.entity_id   = b2.entity_id
+             AND o.metric      = b2.metric
+             AND o.obs_date BETWEEN b2.obs_date - ? AND b2.obs_date - ?
+            GROUP BY 1, 2, 3, 4
+            HAVING count(*) >= ?
+        ) sub
+        WHERE b.entity_type = sub.entity_type
+          AND b.entity_id   = sub.entity_id
+          AND b.metric      = sub.metric
+          AND b.obs_date    = sub.obs_date
+        """,
+        [lag + hw, lag - hw, min_obs],
+    )

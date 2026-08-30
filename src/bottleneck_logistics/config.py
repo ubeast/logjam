@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     # without a multi-million-row first sync.
     initial_backfill_days: int = 900
 
-    # --- Baseline / detection --------------------------------------------
+    # --- Short baseline / detection -------------------------------------
     baseline_window_days: int = 56  # trailing window for the rolling baseline
     baseline_min_observations: int = 21  # require this many points or skip the series
     bottleneck_z_threshold: float = 2.0  # |robust z| above which a day is flagged
@@ -51,6 +51,22 @@ class Settings(BaseSettings):
     # or a chokepoint-transit collapse both mean "flow is blocked").
     # Opportunities look at the opposite tail.
     opportunity_z_threshold: float = 1.5
+
+    # --- Year-over-year baseline ----------------------------------------
+    # The short baseline catches a disruption's *onset* but is blind to one that
+    # outlives its window ("the crisis becomes the new normal"). The YoY
+    # baseline compares each day to the same calendar period ~1 year earlier -
+    # uncontaminated as long as the disruption is under a year old - so it
+    # answers "is this still abnormal, or has it recovered?".
+    yoy_lag_days: int = 365
+    yoy_halfwidth_days: int = 14  # +/- window around the year-ago date
+    yoy_min_observations: int = 7  # need this many year-ago points or skip
+    # Fraction of the year-ago level within which a series counts as "recovered".
+    recovery_tolerance: float = 0.20
+    # `bottleneck recovery` evaluates a trailing window (not a single day) and
+    # skips the most recent days, which PortWatch often under-reports.
+    recovery_window_days: int = 7
+    recovery_trailing_exclude_days: int = 2
 
     @property
     def resources_dir(self) -> Path:

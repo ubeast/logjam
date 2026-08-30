@@ -15,6 +15,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from bottleneck_logistics.analytics.recovery import recovery_status
 from bottleneck_logistics.config import settings
 from bottleneck_logistics.pipeline import refresh as run_refresh
 from bottleneck_logistics.store.db import connect, init_schema
@@ -105,6 +106,50 @@ def ports(
     for (et, eid, name, iso3, _n, last_seen) in rows:
         table.add_row(et, eid, name, iso3 or "", str(last_seen))
     console.print(table)
+
+
+@app.command()
+def recovery(
+    search: str = typer.Option(
+        ..., "--search", "-s", help="Substring of the port/chokepoint name."
+    ),
+) -> None:
+    """Is a disruption still ongoing? Current throughput vs the same period a year ago.
+
+    Example: `bottleneck recovery -s hormuz`
+    """
+    con = connect(read_only=True)
+    try:
+        rows = recovery_status(con, search)
+    finally:
+        con.close()
+
+    if not rows:
+        console.print(f'No baseline rows match "{search}". Try `bottleneck ports -s {search}`.')
+        return
+
+    table = Table(title=f'Recovery status: "{search}"')
+    for col in ("entity", "metric", "as of", "now", "yr-ago", "% of normal", "trend", "verdict"):
+        table.add_column(col)
+    style = {
+        "recovered": "green",
+        "partial recovery": "yellow",
+        "disruption ongoing": "red",
+        "severe disruption ongoing": "bold red",
+        "insufficient year-ago history": "dim",
+    }
+    for r in rows:
+        pct = "-" if r.pct_of_yoy is None else f"{r.pct_of_yoy * 100:.0f}%"
+        yr = "-" if r.expected_yoy is None else f"{r.expected_yoy:,.0f}"
+        table.add_row(
+            r.entity_name, r.metric, str(r.as_of), f"{r.value:,.0f}", yr, pct, r.trend,
+            f"[{style.get(r.verdict, 'white')}]{r.verdict}[/]",
+        )
+    console.print(table)
+    console.print(
+        "[dim]% of normal = today's value / median around the same date ~1 year "
+        "earlier. 'trend' compares with ~4 weeks ago.[/dim]"
+    )
 
 
 @app.command()
