@@ -16,3 +16,6 @@ data/raw/
 
 # Env
 .env
+
+# macOS
+.DS_Store
