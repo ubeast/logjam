@@ -170,11 +170,12 @@ def main() -> None:
         "reroute_candidates": reroute,
     }
     OUT.write_text(json.dumps(payload, indent=2))
+    ja_pct = jebel_ali["portcalls_container_pct_of_normal"]
+    winners = ", ".join(f"{r['name']} {r['pct_change']:+.0f}%" for r in reroute[:5])
     print(f"wrote {OUT}")
     print(f"  Hormuz container transits: {hormuz['n_container_pct_of_normal']}% of normal")
-    print(f"  Jebel Ali container calls: {jebel_ali['portcalls_container_pct_of_normal']}% of normal")
-    print(f"  reroute winners: "
-          + ", ".join(f"{r['name']} {r['pct_change']:+.0f}%" for r in reroute[:5]))
+    print(f"  Jebel Ali container calls: {ja_pct}% of normal")
+    print(f"  reroute winners: {winners}")
     con.close()
 
 
