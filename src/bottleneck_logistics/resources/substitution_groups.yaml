@@ -1,0 +1,79 @@
+# Substitution groups: sets of ports that can realistically absorb each other's
+# volume for a given trade lane. The opportunity detector looks for a group
+# where one member is bottlenecked while another is at/above its own baseline.
+#
+# Each member is resolved to a PortWatch entity by (in priority order):
+#   1. `portid:` if given (exact, e.g. "port1114")
+#   2. `match:`  a case-insensitive SQL LIKE pattern against the port name
+#               plus optional `iso3:` to disambiguate same-named ports
+#
+# Use `bottleneck ports --search "long beach"` to find portids / exact names.
+# This file is a starting point - extend it for the lanes you care about.
+
+default_metric: portcalls_container
+
+groups:
+  - name: US West Coast (Trans-Pacific gateway)
+    notes: >
+      LA/Long Beach dominate; Oakland, PNW and Canadian gateways are the
+      classic overflow valves when San Pedro Bay backs up.
+    members:
+      - { match: "los angeles%", iso3: USA }
+      - { match: "long beach%", iso3: USA }
+      - { match: "oakland%", iso3: USA }
+      - { match: "seattle%", iso3: USA }
+      - { match: "tacoma%", iso3: USA }
+      - { match: "prince rupert%", iso3: CAN }
+      - { match: "vancouver%", iso3: CAN }
+
+  - name: US East / Gulf Coast
+    members:
+      - { match: "new york%", iso3: USA }
+      - { match: "savannah%", iso3: USA }
+      - { match: "charleston%", iso3: USA }
+      - { match: "norfolk%", iso3: USA }
+      - { match: "houston%", iso3: USA }
+      - { match: "%jacksonville%", iso3: USA }
+
+  - name: North Europe (Hamburg - Le Havre range)
+    members:
+      - { match: "rotterdam%", iso3: NLD }
+      - { match: "antwerp%", iso3: BEL }
+      - { match: "hamburg%", iso3: DEU }
+      - { match: "bremerhaven%", iso3: DEU }
+      - { match: "le havre%", iso3: FRA }
+      - { match: "zeebrugge%", iso3: BEL }
+
+  - name: East Asia main gateways
+    members:
+      - { match: "shanghai%", iso3: CHN }
+      - { match: "ningbo%", iso3: CHN }
+      - { match: "shenzhen%", iso3: CHN }
+      - { match: "qingdao%", iso3: CHN }
+      - { match: "busan%", iso3: KOR }
+
+  - name: Arabian Peninsula (Strait of Hormuz exposure)
+    notes: >
+      Jebel Ali and other Gulf ports sit inside Hormuz. Salalah, Sohar and
+      Fujairah offer varying degrees of "outside the strait" positioning -
+      the key opportunity signal during a Hormuz disruption.
+    members:
+      - { match: "jebel ali%", iso3: ARE }
+      - { match: "fujairah%", iso3: ARE }
+      - { match: "sohar%", iso3: OMN }
+      - { match: "salalah%", iso3: OMN }
+      - { match: "dammam%", iso3: SAU }
+      - { match: "jeddah%", iso3: SAU }
+
+  - name: Suez vs Cape reroute (chokepoints)
+    entity_type: chokepoint
+    default_metric: n_total
+    notes: >
+      Not interchangeable ports but interchangeable *routes*. When Suez /
+      Bab-el-Mandeb transits collapse, Cape of Good Hope transits rise - the
+      detector surfaces that as an opportunity to pre-book Cape capacity.
+    members:
+      - { match: "suez%" }
+      - { match: "bab-el-mandeb%" }
+      - { match: "%good hope%" }
+      - { match: "%gibraltar%" }

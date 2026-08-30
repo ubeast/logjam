@@ -1,0 +1,45 @@
+name: refresh
+
+# PortWatch updates weekly on Tuesdays ~09:00 ET (13:00-14:00 UTC).
+# Run a few hours later, plus a manual trigger.
+on:
+  schedule:
+    - cron: "0 18 * * 2"
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Full backfill"
+        type: boolean
+        default: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync deps
+        run: uv sync --extra dev
+
+      # The committed DuckDB file is the state store between runs. It is
+      # git-ignored for local dev; in CI we cache it instead so history
+      # accumulates without bloating the repo.
+      - name: Restore database
+        uses: actions/cache@v4
+        with:
+          path: data/bottleneck.duckdb
+          key: bottleneck-db-${{ github.run_id }}
+          restore-keys: bottleneck-db-
+
+      - name: Refresh
+        run: uv run python scripts/refresh.py ${{ inputs.full && '--full' || '' }}
+
+      - name: Upload signals artifact
+        run: uv run bottleneck opportunities --days 30 > opportunities.txt || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signals
+          path: opportunities.txt
