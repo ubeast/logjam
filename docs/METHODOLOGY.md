@@ -4,6 +4,8 @@ How `bottleneck-logistics` turns raw port-activity data into bottleneck,
 recovery, and opportunity signals. This document is the reference for anyone
 reviewing a finding the tool produced.
 
+Repository: <https://github.com/ubeast/bottleneck-logistics>
+
 ---
 
 ## 1. Data source

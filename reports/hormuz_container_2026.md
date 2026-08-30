@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **By** | Michael Schertz |
-| **Tooling** | [`bottleneck-logistics`](../README.md) (open-source) |
+| **Tooling** | [`bottleneck-logistics`](https://github.com/ubeast/bottleneck-logistics) (open-source) |
 | **Generated** | 30 August 2026 |
 | **Data as of** | 23 August 2026 |
 | **Source** | IMF PortWatch (`portwatch.imf.org`) |
@@ -200,7 +200,9 @@ Red Sea ports, Mediterranean and South Asian transshipment hubs) compared on
 change; absolute rates shown alongside because small ports swing large
 percentages off a low base.
 
-**Reproduce.** Run `bottleneck refresh --full` to build the database, then
+**Reproduce.** Clone
+<https://github.com/ubeast/bottleneck-logistics>, run `bottleneck refresh --full`
+to build the database, then
 `uv run python scripts/reports/hormuz_container_2026.py`. Full method — including
 the tool's short and year-over-year baselines and its bottleneck / recovery /
 opportunity logic — in [`docs/METHODOLOGY.md`](../docs/METHODOLOGY.md).
@@ -221,7 +223,8 @@ opportunity logic — in [`docs/METHODOLOGY.md`](../docs/METHODOLOGY.md).
 
 ---
 
-*Michael Schertz · built with `bottleneck-logistics`, an open-source logistics
-bottleneck & opportunity identifier. Data © IMF PortWatch, used under its free
-public-use terms. This document reports analysis of public shipping data; it is
-not affiliated with or endorsed by the IMF.*
+*Michael Schertz · built with
+[`bottleneck-logistics`](https://github.com/ubeast/bottleneck-logistics), an
+open-source logistics bottleneck & opportunity identifier. Data © IMF PortWatch,
+used under its free public-use terms. This document reports analysis of public
+shipping data; it is not affiliated with or endorsed by the IMF.*

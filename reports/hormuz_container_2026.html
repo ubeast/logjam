@@ -386,7 +386,7 @@
     figure { box-shadow: none; }
     thead th { position: static; }
     td:first-child { white-space: nowrap; }
-    a { color: var(--ink); text-decoration: none; }
+    a { color: var(--accent-ink); text-decoration: none; }
     footer.colophon { padding: 12pt 0 0; }
   }
 </style>
@@ -408,7 +408,7 @@
     <p class="dek">Five months on, box-ship transits sit at roughly one-tenth of their pre-crisis rate — and the cargo they would have carried has rerouted, not resumed.</p>
     <div class="byline">
       <span><b>By</b> Michael Schertz</span>
-      <span><b>Tooling</b> bottleneck-logistics (open-source)</span>
+      <span><b>Tooling</b> <a href="https://github.com/ubeast/bottleneck-logistics">bottleneck-logistics</a> (open-source)</span>
       <span><b>Generated</b> 30 Aug 2026</span>
       <span><b>Source</b> IMF PortWatch</span>
       <span><b>Method</b> see §&nbsp;Method &amp; provenance</span>
@@ -571,7 +571,7 @@
       <dd>Candidate substitute ports (Indian west coast, Omani and Red Sea ports, Mediterranean and South Asian transshipment hubs) compared on <code>portcalls_container</code>, July 2026 vs the same pre-crisis window. Ranked by percent change; absolute rates shown alongside because small ports swing large percentages off a low base.</dd>
 
       <dt>Reproduce</dt>
-      <dd>Run <code>bottleneck refresh --full</code> to build the database, then <code>uv&nbsp;run&nbsp;python&nbsp;scripts/reports/hormuz_container_2026.py</code>. Full method in <code>docs/METHODOLOGY.md</code>.</dd>
+      <dd>Clone <a href="https://github.com/ubeast/bottleneck-logistics">github.com/ubeast/bottleneck-logistics</a>, run <code>bottleneck refresh --full</code> to build the database, then <code>uv&nbsp;run&nbsp;python&nbsp;scripts/reports/hormuz_container_2026.py</code>. Full method in <code>docs/METHODOLOGY.md</code>.</dd>
     </dl>
 
     <p class="prose" style="margin-top:2rem"><strong>Limitations</strong></p>
@@ -587,7 +587,7 @@
 
 <footer class="colophon">
   <div class="wrap">
-    Michael Schertz · built with bottleneck-logistics, an open-source logistics bottleneck &amp; opportunity identifier<br />
+    Michael Schertz · built with <a href="https://github.com/ubeast/bottleneck-logistics">bottleneck-logistics</a>, an open-source logistics bottleneck &amp; opportunity identifier<br />
     Data © IMF PortWatch, used under its free public-use terms · Brief generated 30 Aug 2026<br />
     This document reports analysis of public shipping data. It is not affiliated with or endorsed by the IMF.
   </div>

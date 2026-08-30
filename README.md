@@ -46,6 +46,8 @@ free public-use terms.
 ## Install
 
 ```bash
+git clone https://github.com/ubeast/bottleneck-logistics
+cd bottleneck-logistics
 uv sync --extra dev            # core + test deps
 uv sync --extra dev --extra dashboard   # also the Streamlit UI
 ```
