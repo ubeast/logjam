@@ -102,8 +102,25 @@ src/bottleneck_logistics/
 ├── pipeline.py                   refresh() = the whole chain
 └── cli.py                        `bottleneck` command
 scripts/refresh.py                cron entry point
+scripts/reports/                  one-off analysis generators (JSON in reports/data/)
+reports/                          published briefs (HTML) + their source data
+docs/METHODOLOGY.md               how baselines, detection, and recovery work
 .github/workflows/refresh.yml     weekly automated refresh
 ```
+
+## Reports
+
+`reports/` holds finished analytical briefs backed by reproducible generator
+scripts in `scripts/reports/`. Each script re-derives every figure from the local
+DuckDB store — nothing is hand-transcribed — and writes its data to
+`reports/data/*.json`.
+
+- **`reports/hormuz_container_2026.html`** — container shipping through the Strait
+  of Hormuz, March–August 2026: the collapse, count-vs-capacity confirmation, and
+  the reroute to Indian west-coast / Salalah / Egyptian Mediterranean ports.
+  Regenerate: `uv run python scripts/reports/hormuz_container_2026.py`.
+
+Method and limitations for everything the tool produces: **[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md)**.
 
 ## Tuning
 

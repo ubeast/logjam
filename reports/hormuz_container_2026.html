@@ -1,0 +1,840 @@
+<title>Hormuz Container Disruption</title>
+<meta name="description" content="Container traffic through the Strait of Hormuz, March–August 2026: what the shipping data shows and where the volume rerouted." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" />
+
+<style>
+  :root {
+    color-scheme: light;
+    --paper:        #eaeef0;
+    --surface:      #f7f9f9;
+    --surface-2:    #ffffff;
+    --ink:          #15211f;
+    --ink-2:        #47585b;
+    --ink-3:        #7a898c;
+    --hairline:     #d2dadc;
+    --rule:         #b6c2c4;
+    --accent:       #b0591a;
+    --accent-ink:   #b0591a;
+    --accent-soft:  #f0e3d5;
+
+    --chart-surface:#fbfcfc;
+    --grid:         #e2e3dd;
+    --axis:         #c3c2b7;
+    --s1:           #2a78d6;
+    --s2:           #eb6834;
+    --pos:          #2a78d6;
+    --neg:          #d03b3b;
+
+    --good:     #0ca30c;
+    --warning:  #fab219;
+    --serious:  #ec835a;
+    --critical: #d03b3b;
+
+    --measure: 66ch;
+    --gap: clamp(1.5rem, 4vw, 3rem);
+
+    --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper:        #0c1214;
+      --surface:      #131c1e;
+      --surface-2:    #182225;
+      --ink:          #e9eeef;
+      --ink-2:        #aab8ba;
+      --ink-3:        #78878a;
+      --hairline:     #243437;
+      --rule:         #32464a;
+      --accent:       #e08a4c;
+      --accent-ink:   #e79a63;
+      --accent-soft:  #271d14;
+
+      --chart-surface:#161d1f;
+      --grid:         #2b2c2a;
+      --axis:         #3b3b38;
+      --s1:           #3987e5;
+      --s2:           #d95926;
+      --pos:          #3987e5;
+      --neg:          #e66767;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper:        #0c1214;
+    --surface:      #131c1e;
+    --surface-2:    #182225;
+    --ink:          #e9eeef;
+    --ink-2:        #aab8ba;
+    --ink-3:        #78878a;
+    --hairline:     #243437;
+    --rule:         #32464a;
+    --accent:       #e08a4c;
+    --accent-ink:   #e79a63;
+    --accent-soft:  #271d14;
+
+    --chart-surface:#161d1f;
+    --grid:         #2b2c2a;
+    --axis:         #3b3b38;
+    --s1:           #3987e5;
+    --s2:           #d95926;
+    --pos:          #3987e5;
+    --neg:          #e66767;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 clamp(1rem, 4vw, 2.5rem); }
+
+  /* ---- top status bar ---- */
+  .statusbar {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--hairline);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+  }
+  .statusbar .wrap {
+    display: flex; align-items: center; gap: 1rem;
+    min-height: 44px; flex-wrap: wrap;
+  }
+  .statusbar .id { color: var(--ink-3); text-transform: uppercase; }
+  .statusbar .sep { color: var(--rule); }
+  .statusbar .asof { color: var(--ink-2); }
+  .statusbar .verdict {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid color-mix(in srgb, var(--critical) 45%, transparent);
+    color: var(--critical);
+    border-radius: 2px;
+    text-transform: uppercase; font-weight: 500;
+  }
+  .verdict .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--critical); }
+
+  /* ---- masthead ---- */
+  header.masthead { padding: clamp(2.5rem, 8vw, 5rem) 0 clamp(1.5rem, 4vw, 2.5rem); }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--accent-ink);
+    display: flex; align-items: center; gap: 0.8rem;
+    margin-bottom: 1.4rem;
+  }
+  .eyebrow::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: clamp(2.4rem, 6.5vw, 4.1rem);
+    line-height: 1.04;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 0 0 1.1rem;
+    max-width: 22ch;
+  }
+  .dek {
+    font-family: var(--font-display);
+    font-size: clamp(1.15rem, 2.4vw, 1.5rem);
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--ink-2);
+    max-width: 46ch;
+    margin: 0 0 2rem;
+  }
+  .byline {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--ink-3);
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--hairline);
+  }
+  .byline b { color: var(--ink-2); font-weight: 500; }
+
+  /* ---- key figures ---- */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1px;
+    background: var(--hairline);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: var(--gap) 0;
+  }
+  .tile { background: var(--surface); padding: 1.4rem 1.3rem 1.3rem; }
+  .tile .k {
+    font-family: var(--font-mono);
+    font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 0.7rem;
+  }
+  .tile .v {
+    font-family: var(--font-display);
+    font-size: 2.5rem; font-weight: 500; line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .tile .v small { font-size: 1rem; font-weight: 400; color: var(--ink-2); letter-spacing: 0; }
+  .tile .note { font-size: 0.82rem; color: var(--ink-2); margin-top: 0.5rem; line-height: 1.4; }
+  .tile .v.crit { color: var(--critical); }
+
+  /* ---- body sections ---- */
+  section { padding: clamp(2rem, 5vw, 3.5rem) 0; border-top: 1px solid var(--hairline); }
+  .sec-head { display: flex; gap: 1rem; align-items: baseline; margin-bottom: 1.6rem; }
+  .sec-num {
+    font-family: var(--font-mono);
+    font-size: 0.8rem; color: var(--accent-ink); font-weight: 500;
+    padding-top: 0.4rem;
+  }
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: clamp(1.6rem, 3.6vw, 2.3rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0;
+  }
+  .prose { max-width: var(--measure); }
+  .prose p { margin: 0 0 1.1rem; }
+  .prose p:last-child { margin-bottom: 0; }
+  .prose strong { font-weight: 600; }
+  .prose em { font-style: italic; color: var(--ink-2); }
+
+  a { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+  a:hover { text-decoration-thickness: 2px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+  .lede {
+    font-family: var(--font-display);
+    font-size: clamp(1.2rem, 2.6vw, 1.6rem);
+    line-height: 1.45;
+    font-weight: 400;
+    max-width: 40ch;
+    margin: 0 0 1.6rem;
+  }
+  .lede .hl { background: linear-gradient(transparent 62%, var(--accent-soft) 62%); padding: 0 0.1em; }
+
+  /* ---- figure / chart ---- */
+  figure {
+    margin: 2rem 0 0;
+    background: var(--chart-surface);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    padding: 1.4rem clamp(0.8rem, 2vw, 1.5rem) 1.1rem;
+  }
+  figure .fig-top { margin-bottom: 1rem; }
+  figure .fig-title {
+    font-family: var(--font-body);
+    font-weight: 600; font-size: 0.98rem;
+    margin: 0 0 0.2rem;
+  }
+  figure .fig-sub { font-size: 0.82rem; color: var(--ink-2); margin: 0; }
+  .chart-scroll { overflow-x: auto; }
+  .chart svg { display: block; width: 100%; height: auto; font-family: var(--font-mono); }
+  .chart text { fill: var(--ink-2); }
+  .axis-line { stroke: var(--axis); stroke-width: 1; }
+  .grid-line { stroke: var(--grid); stroke-width: 1; }
+  .ref-line { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+  .tick { font-size: 11px; fill: var(--ink-3); }
+  .series-label { font-size: 12px; font-weight: 500; font-family: var(--font-body); }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1.3rem;
+    margin-top: 0.9rem; font-size: 0.8rem; color: var(--ink-2);
+    font-family: var(--font-body);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
+  .legend i { width: 20px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  figcaption {
+    margin-top: 0.9rem; padding-top: 0.8rem;
+    border-top: 1px solid var(--hairline);
+    font-size: 0.78rem; color: var(--ink-3); line-height: 1.5;
+  }
+
+  .tooltip {
+    position: fixed; z-index: 40; pointer-events: none;
+    background: var(--surface-2); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 4px;
+    padding: 0.5rem 0.7rem; font-size: 0.78rem; font-family: var(--font-mono);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.16);
+    opacity: 0; transition: opacity 0.12s; max-width: 240px;
+  }
+  .tooltip .tt-h { font-weight: 500; margin-bottom: 0.2rem; }
+  .tooltip .tt-row { color: var(--ink-2); }
+  .tooltip .tt-row b { color: var(--ink); font-weight: 500; }
+
+  .hover-dot { pointer-events: none; }
+  .hit { fill: transparent; cursor: crosshair; }
+
+  /* ---- callout ---- */
+  .callout {
+    margin: 2rem 0 0;
+    border-left: 2px solid var(--accent);
+    background: var(--surface);
+    padding: 1.1rem 1.3rem;
+    border-radius: 0 3px 3px 0;
+    max-width: var(--measure);
+  }
+  .callout p { margin: 0; font-size: 0.96rem; }
+  .callout .lbl {
+    font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent-ink); display: block; margin-bottom: 0.4rem;
+  }
+
+  /* ---- data table ---- */
+  .tbl-wrap { overflow-x: auto; margin-top: 2rem; border: 1px solid var(--hairline); border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.82rem; font-family: var(--font-mono); }
+  caption {
+    text-align: left; padding: 0.9rem 1rem; font-family: var(--font-body);
+    font-weight: 600; font-size: 0.92rem; background: var(--surface);
+    border-bottom: 1px solid var(--hairline);
+  }
+  th, td { padding: 0.5rem 0.9rem; text-align: right; font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th {
+    font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 500; border-bottom: 1px solid var(--rule);
+    position: sticky; top: 0; background: var(--chart-surface);
+  }
+  tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface) 55%, transparent); }
+  tbody td { border-bottom: 1px solid var(--hairline); }
+  tr.break td { border-bottom: 2px solid var(--rule); }
+  .cell-crit { color: var(--critical); }
+
+  /* ---- method / footer ---- */
+  .method { background: var(--surface); border-top: 1px solid var(--hairline); }
+  .method h2 { font-size: clamp(1.3rem, 3vw, 1.7rem); }
+  .method dl { margin: 1.4rem 0 0; max-width: 78ch; }
+  .method dt {
+    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent-ink); margin-top: 1.3rem;
+  }
+  .method dd { margin: 0.35rem 0 0; font-size: 0.94rem; color: var(--ink-2); }
+  .method dd code {
+    font-family: var(--font-mono); font-size: 0.85em;
+    background: var(--surface-2); border: 1px solid var(--hairline);
+    padding: 0.05rem 0.35rem; border-radius: 3px; color: var(--ink);
+  }
+  footer.colophon {
+    padding: 2.5rem 0 3.5rem;
+    font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-3);
+    line-height: 1.7;
+  }
+
+  .limits { max-width: 78ch; margin-top: 1.4rem; padding-left: 1.1rem; }
+  .limits li { margin-bottom: 0.5rem; font-size: 0.92rem; color: var(--ink-2); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: draw 1.4s ease-out 0.2s forwards; }
+    .fade-area { opacity: 0; animation: fade 1s ease-out 1s forwards; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    @keyframes fade { to { opacity: 1; } }
+  }
+</style>
+
+<div class="statusbar">
+  <div class="wrap">
+    <span class="id">Disruption Brief · CHOKEPOINT&nbsp;6</span>
+    <span class="sep">/</span>
+    <span class="asof">DATA AS OF 23&nbsp;AUG&nbsp;2026</span>
+    <span class="verdict"><span class="dot"></span>Severe · Ongoing</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Supply-chain disruption brief</div>
+    <h1>Container traffic through the Strait of Hormuz has run near zero since March</h1>
+    <p class="dek">Five months on, box-ship transits sit at roughly one-tenth of their pre-crisis rate — and the cargo they would have carried has rerouted, not resumed.</p>
+    <div class="byline">
+      <span><b>Prepared by</b> bottleneck-logistics (open-source)</span>
+      <span><b>Generated</b> 30 Aug 2026</span>
+      <span><b>Source</b> IMF PortWatch</span>
+      <span><b>Method</b> see §&nbsp;Method &amp; provenance</span>
+    </div>
+  </header>
+
+  <div class="tiles">
+    <div class="tile">
+      <div class="k">Hormuz container transits</div>
+      <div class="v crit">9<small>&thinsp;% of normal</small></div>
+      <div class="note">1.0 / day in July vs 11.1 / day pre-crisis</div>
+    </div>
+    <div class="tile">
+      <div class="k">Container cargo capacity</div>
+      <div class="v crit">6<small>&thinsp;% of normal</small></div>
+      <div class="note">Capacity fell as hard as vessel count</div>
+    </div>
+    <div class="tile">
+      <div class="k">Jebel Ali container calls</div>
+      <div class="v crit">18<small>&thinsp;% of normal</small></div>
+      <div class="note">The Gulf's main box hub, effectively offline</div>
+    </div>
+    <div class="tile">
+      <div class="k">Duration</div>
+      <div class="v">6<small>&thinsp;months</small></div>
+      <div class="note">Onset March 2026, no recovery trend</div>
+    </div>
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">§ 1</span><h2>The finding</h2></div>
+    <p class="lede">The question was whether the disruption is <span class="hl">still ongoing or has returned to normal</span>. For container shipping, the answer is unambiguous: ongoing, and total.</p>
+    <div class="prose">
+      <p>IMF PortWatch estimates daily vessel movements at 28 maritime chokepoints from satellite AIS. Through the Strait of Hormuz — the entrance to the Persian Gulf, coded <em>chokepoint&nbsp;6</em> — container-ship transits averaged <strong>11 per day</strong> in the four months before March 2026. Since March they have averaged <strong>under one per day</strong>, and the most recent clean month (July) sits at <strong>1.0 per day</strong>. August is tracking lower still, though PortWatch revises its most recent weeks upward as more satellite data arrives, so that figure is provisional.</p>
+      <p>This is not a slowdown. It is the near-complete removal of container shipping from the route, sustained for half a year with no upward trend.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">§ 2</span><h2>The collapse</h2></div>
+    <div class="prose">
+      <p>Container transits held between 9 and 18 per day through February 2026, then fell off a cliff in March and have not come back. The brief mid-year uptick — 1.3 per day in June — did not hold.</p>
+    </div>
+
+    <figure>
+      <div class="fig-top">
+        <p class="fig-title">Strait of Hormuz — container-ship transits per day</p>
+        <p class="fig-sub">Monthly average, September 2025 – August 2026</p>
+      </div>
+      <div class="chart-scroll"><div class="chart" id="chart-transits"></div></div>
+      <figcaption>Source: IMF PortWatch, <code>Daily_Chokepoints_Data</code>, field <code>n_container</code>. August 2026 (hollow marker) is provisional — PortWatch under-reports its most recent ~2 weeks.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">§ 3</span><h2>Blocked, not merely thinned</h2></div>
+    <div class="prose">
+      <p>A drop in <em>vessel count</em> alone is ambiguous — it could mean fewer, larger ships moving the same cargo. It doesn't. PortWatch also estimates the aggregate cargo <em>capacity</em> of transiting vessels, and capacity fell in near-perfect lockstep with the count — in fact slightly harder. The few box ships still using the strait are <strong>smaller</strong> than the pre-crisis norm, not larger.</p>
+      <p>The collapse is also <strong>uniform across every cargo class</strong> — tankers, containers, dry bulk, ro-ro all fell to between zero and roughly 15&thinsp;% of a year earlier. That is the signature of a route-wide closure, not a commodity-specific restriction, which would gut tankers while sparing containers.</p>
+    </div>
+
+    <figure>
+      <div class="fig-top">
+        <p class="fig-title">Vessel count and cargo capacity fell together</p>
+        <p class="fig-sub">Container traffic through Hormuz, indexed to the Nov 2025 – Feb 2026 average (= 100)</p>
+      </div>
+      <div class="chart-scroll"><div class="chart" id="chart-index"></div></div>
+      <div class="legend">
+        <span><i style="background:var(--s1)"></i> Vessel count (<code>n_container</code>)</span>
+        <span><i style="background:var(--s2)"></i> Cargo capacity (<code>capacity_container</code>)</span>
+      </div>
+      <figcaption>Source: IMF PortWatch, <code>Daily_Chokepoints_Data</code>. Both series divided by their own pre-crisis mean, so 100 = the pre-crisis normal for each.</figcaption>
+    </figure>
+
+    <div class="callout">
+      <span class="lbl">Why this matters</span>
+      <p>If the count had dropped while capacity held, a count-based alarm would be a false positive — cargo still flowing on bigger ships. Here both lines fall to the floor together: real throughput is gone.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">§ 4</span><h2>Jebel Ali goes dark</h2></div>
+    <div class="prose">
+      <p>Jebel Ali (Dubai) is the Gulf's dominant container port and one of the ten busiest in the world — the region's transshipment anchor. It sits <em>inside</em> the strait. Its container operation tracked the chokepoint almost exactly: ~13 container port calls per day through February, then <strong>0.6 in March</strong>, recovering only to ~2 per day by mid-summer. Estimated container trade volume — imports and exports — is running at <strong>15–20&thinsp;% of pre-crisis levels</strong>.</p>
+    </div>
+
+    <figure>
+      <div class="fig-top">
+        <p class="fig-title">Jebel Ali — container port calls per day</p>
+        <p class="fig-sub">Monthly average, September 2025 – August 2026</p>
+      </div>
+      <div class="chart-scroll"><div class="chart" id="chart-jebelali"></div></div>
+      <figcaption>Source: IMF PortWatch, <code>Daily_Ports_Data</code>, field <code>portcalls_container</code>, port ID <code>port744</code>.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">§ 5</span><h2>Where the containers went</h2></div>
+    <div class="prose">
+      <p>Cargo that would have moved through the Gulf has rerouted — and not to the usual transshipment hubs. Comparing July 2026 with the pre-crisis baseline, container port calls surged on the <strong>Indian subcontinent's west coast</strong> (Nhava Sheva up 114&thinsp;%, plus Hazira, Pipavav, Mundra, and Karachi), at <strong>Salalah</strong> in Oman — outside the strait, the natural regional substitute — and at <strong>Damietta</strong> on Egypt's Mediterranean coast.</p>
+      <p>The mega-transshipment hubs that would normally absorb a shock — <strong>Colombo and Piraeus</strong> — are flat. And Saudi Arabia's Red Sea ports (<strong>Jeddah, Dammam</strong>) are <em>down</em>, because the Bab-el-Mandeb disruption compounds the Gulf one.</p>
+    </div>
+
+    <figure>
+      <div class="fig-top">
+        <p class="fig-title">Change in container port calls — July 2026 vs pre-crisis</p>
+        <p class="fig-sub">Percent change in daily port-call average, Nov 2025 – Feb 2026 baseline</p>
+      </div>
+      <div class="chart-scroll"><div class="chart" id="chart-reroute"></div></div>
+      <figcaption>Source: IMF PortWatch, <code>Daily_Ports_Data</code>, field <code>portcalls_container</code>. Absolute rates shown at right (calls/day, pre-crisis → July). Ports below ~1 call/day pre-crisis show large percentages off a small base — read the absolute figures alongside.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">§ 6</span><h2>Assessment</h2></div>
+    <div class="prose">
+      <p>For container shipping, the Strait of Hormuz is functionally closed and has been since March 2026. There is no recovery trend in the data through late August. The regional container network has partly re-formed around it — Indian west-coast direct calls, Salalah, and Egyptian Mediterranean transshipment are the load-bearing alternatives — but at a fraction of the lost volume and at longer transit distances.</p>
+      <p>Two caveats bound this read. First, PortWatch measures vessel movements, not the reasons for them; the March break coincides with the reported <em>2026 Strait of Hormuz crisis</em>, but the data attests to the shipping outcome, not its cause. Second, the year-over-year framing answers "still abnormal versus a year ago" — accurate for an event this age, but it would read "recovered" for any disruption older than a year, when both the current and the reference figure are depressed.</p>
+    </div>
+  </section>
+
+  <div class="tbl-wrap">
+    <table>
+      <caption>Monthly figures — Strait of Hormuz and Jebel Ali, containers</caption>
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Hormuz transits/day</th>
+          <th>Hormuz capacity/day</th>
+          <th>Jebel Ali calls/day</th>
+          <th>Jebel Ali imports/day</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-body"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<section class="method">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">§</span><h2>Method &amp; provenance</h2></div>
+    <div class="prose">
+      <p>Every figure in this brief is reproducible from a local database built by the open-source <code>bottleneck-logistics</code> tool and a single generator script. Nothing is hand-transcribed.</p>
+    </div>
+    <dl>
+      <dt>Data source</dt>
+      <dd>IMF PortWatch (<a href="https://portwatch.imf.org">portwatch.imf.org</a>) — daily maritime activity estimated from satellite AIS on ~90,000 ships, via the UN Global Platform. Two ArcGIS feature layers: <code>Daily_Ports_Data</code> and <code>Daily_Chokepoints_Data</code>. Free public use with attribution. Backfill covers 13 Mar 2024 – 23 Aug 2026.</dd>
+
+      <dt>What the numbers are</dt>
+      <dd><code>n_container</code> / <code>portcalls_container</code> are counts of container-ship transits and port calls. <code>capacity_container</code> is the estimated aggregate cargo capacity of those vessels, derived from ship particulars. <code>import_container</code> / <code>export_container</code> are PortWatch's modelled trade-volume estimates — directional, not measured TEU.</dd>
+
+      <dt>Baseline</dt>
+      <dd>The pre-crisis reference is a fixed window, <strong>November 2025 – February 2026</strong> — the last four stable months before the March break — rather than a rolling baseline, which by mid-2026 would have absorbed the collapse into its own "normal." Percent-of-normal = current value ÷ pre-crisis mean.</dd>
+
+      <dt>"Current" month</dt>
+      <dd><strong>July 2026.</strong> PortWatch revises its most recent ~2 weeks upward as satellite data lands, so August was still settling at generation time and is shown for context only, marked provisional.</dd>
+
+      <dt>Reroute analysis</dt>
+      <dd>Candidate substitute ports (Indian west coast, Omani and Red Sea ports, Mediterranean and South Asian transshipment hubs) compared on <code>portcalls_container</code>, July 2026 vs the same pre-crisis window. Ranked by percent change; absolute rates shown alongside because small ports swing large percentages off a low base.</dd>
+
+      <dt>Reproduce</dt>
+      <dd>Run <code>bottleneck refresh --full</code> to build the database, then <code>uv&nbsp;run&nbsp;python&nbsp;scripts/reports/hormuz_container_2026.py</code>. Full method in <code>docs/METHODOLOGY.md</code>.</dd>
+    </dl>
+
+    <p class="prose" style="margin-top:2rem"><strong>Limitations</strong></p>
+    <ul class="limits">
+      <li>PortWatch measures throughput (vessels moving), not queue length or berth dwell time. This brief cannot say how long individual ships waited.</li>
+      <li>The data attests to the shipping outcome, not the cause. The March 2026 onset coincides with the reported Strait of Hormuz crisis; causation is not established here.</li>
+      <li>Trade-volume and capacity fields are model estimates, not manifest data — directionally sound, not exact.</li>
+      <li>The year-over-year lens reads "recovered" for any disruption older than ~1 year; this brief uses an explicit fixed pre-crisis window to avoid that.</li>
+      <li>The reroute set only includes ports named in the tool's substitution list; an unlisted beneficiary would be missed.</li>
+    </ul>
+  </div>
+</section>
+
+<footer class="colophon">
+  <div class="wrap">
+    bottleneck-logistics · open-source logistics bottleneck &amp; opportunity identifier<br />
+    Data © IMF PortWatch, used under its free public-use terms · Brief generated 30 Aug 2026<br />
+    This document reports analysis of public shipping data. It is not affiliated with or endorsed by the IMF.
+  </div>
+</footer>
+
+<div class="tooltip" id="tt" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var MONTHS = ["Sep 25","Oct 25","Nov 25","Dec 25","Jan 26","Feb 26","Mar 26","Apr 26","May 26","Jun 26","Jul 26","Aug 26"];
+
+  var DATA = {
+    transits:   [16.9, 17.5, 11.6, 9.3, 10.6, 13.2, 0.4, 0.8, 0.3, 1.3, 1.0, 0.3],
+    capacity:   [438109, 464005, 297315, 295981, 314648, 368858, 9117, 18917, 3877, 23774, 17750, 3163],
+    jaCalls:    [14.3, 14.3, 13.3, 12.9, 13.0, 13.0, 0.6, 1.5, 0.7, 1.1, 2.3, 1.6],
+    jaImports:  [264686, 295791, 268172, 269670, 313859, 304601, 13898, 32313, 15983, 19788, 42047, 37038]
+  };
+  var PRE_TRANSITS = 11.1, PRE_CAPACITY = 318141;
+
+  var reroute = [
+    { name: "Nhava Sheva", country: "IN", pct: 114, a: 3.5, b: 7.5 },
+    { name: "Karachi", country: "PK", pct: 100, a: 1.3, b: 2.6 },
+    { name: "King Abdullah", country: "SA", pct: 100, a: 0.4, b: 0.8 },
+    { name: "Hazira", country: "IN", pct: 83, a: 0.6, b: 1.1 },
+    { name: "Pipavav", country: "IN", pct: 75, a: 0.4, b: 0.7 },
+    { name: "Salalah", country: "OM", pct: 48, a: 2.1, b: 3.1 },
+    { name: "Damietta", country: "EG", pct: 47, a: 1.9, b: 2.8 },
+    { name: "Mundra", country: "IN", pct: 11, a: 5.5, b: 6.1 },
+    { name: "Colombo", country: "LK", pct: -2, a: 9.0, b: 8.8 },
+    { name: "Piraeus", country: "GR", pct: -2, a: 6.4, b: 6.3 },
+    { name: "Sohar", country: "OM", pct: -13, a: 1.5, b: 1.3 },
+    { name: "Port Said", country: "EG", pct: -23, a: 1.3, b: 1.0 },
+    { name: "Aqaba", country: "JO", pct: -27, a: 1.5, b: 1.1 },
+    { name: "Jeddah", country: "SA", pct: -34, a: 4.7, b: 3.1 },
+    { name: "Dammam", country: "SA", pct: -61, a: 2.3, b: 0.9 }
+  ];
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function el(name, attrs) {
+    var n = document.createElementNS(SVGNS, name);
+    if (attrs) for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function fmt(n) {
+    if (n >= 1000) return Math.round(n).toLocaleString("en-US");
+    return (Math.round(n * 10) / 10).toString();
+  }
+
+  var tt = document.getElementById("tt");
+  function showTip(html, x, y) {
+    tt.innerHTML = html;
+    tt.style.opacity = "1";
+    var r = tt.getBoundingClientRect();
+    var px = x + 14, py = y - r.height - 10;
+    if (px + r.width > window.innerWidth - 8) px = x - r.width - 14;
+    if (py < 8) py = y + 16;
+    tt.style.left = px + "px";
+    tt.style.top = py + "px";
+  }
+  function hideTip() { tt.style.opacity = "0"; }
+
+  // ---- line / area chart ----
+  function lineChart(mountId, opts) {
+    var mount = document.getElementById(mountId);
+    var W = 860, H = 340;
+    var m = { t: 16, r: 54, b: 34, l: 44 };
+    var iw = W - m.l - m.r, ih = H - m.t - m.b;
+    var series = opts.series; // [{key, values, color, label}]
+    var yMax = opts.yMax;
+    var n = MONTHS.length;
+
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img" });
+    svg.setAttribute("aria-label", opts.aria);
+
+    function X(i) { return m.l + (iw * i) / (n - 1); }
+    function Y(v) { return m.t + ih - (ih * v) / yMax; }
+
+    // gridlines + y ticks
+    opts.yTicks.forEach(function (v) {
+      svg.appendChild(el("line", { class: "grid-line", x1: m.l, y1: Y(v), x2: m.l + iw, y2: Y(v) }));
+      var t = el("text", { class: "tick", x: m.l - 8, y: Y(v) + 4, "text-anchor": "end" });
+      t.textContent = opts.yFmt ? opts.yFmt(v) : v;
+      svg.appendChild(t);
+    });
+    // baseline
+    svg.appendChild(el("line", { class: "axis-line", x1: m.l, y1: m.t + ih, x2: m.l + iw, y2: m.t + ih }));
+
+    // optional reference line at y=100 style
+    if (opts.refLine != null) {
+      svg.appendChild(el("line", { class: "ref-line", x1: m.l, y1: Y(opts.refLine), x2: m.l + iw, y2: Y(opts.refLine) }));
+      var rt = el("text", { class: "tick", x: m.l + iw + 6, y: Y(opts.refLine) + 4 });
+      rt.textContent = opts.refLabel || "";
+      rt.setAttribute("fill", "var(--ink-3)");
+      svg.appendChild(rt);
+    }
+
+    // x ticks (every other month)
+    MONTHS.forEach(function (mo, i) {
+      if (i % 2 !== 0 && i !== n - 1) return;
+      var t = el("text", { class: "tick", x: X(i), y: m.t + ih + 20, "text-anchor": "middle" });
+      t.textContent = mo;
+      svg.appendChild(t);
+    });
+
+    // March marker
+    if (opts.markIndex != null) {
+      var mx = X(opts.markIndex);
+      svg.appendChild(el("line", { class: "ref-line", x1: mx, y1: m.t, x2: mx, y2: m.t + ih }));
+      var mk = el("text", { class: "tick", x: mx + 5, y: m.t + 12 });
+      mk.textContent = opts.markLabel || "";
+      mk.setAttribute("fill", "var(--accent-ink)");
+      svg.appendChild(mk);
+    }
+
+    series.forEach(function (s) {
+      var pts = s.values.map(function (v, i) { return [X(i), Y(v)]; });
+      var solidPts = opts.provisionalLast ? pts.slice(0, n - 1) : pts;
+      var dLine = solidPts.map(function (p, i) { return (i ? "L" : "M") + p[0] + " " + p[1]; }).join(" ");
+
+      if (s.area) {
+        var ap = solidPts;
+        var dArea = ap.map(function (p, i) { return (i ? "L" : "M") + p[0] + " " + p[1]; }).join(" ") +
+          " L" + ap[ap.length - 1][0] + " " + (m.t + ih) + " L" + ap[0][0] + " " + (m.t + ih) + " Z";
+        var ar = el("path", { d: dArea, fill: s.color, "fill-opacity": "0.12", class: "fade-area" });
+        svg.appendChild(ar);
+      }
+      var path = el("path", { d: dLine, fill: "none", stroke: s.color, "stroke-width": "2", "stroke-linejoin": "round", "stroke-linecap": "round" });
+      var len = 0;
+      solidPts.forEach(function (p, i) { if (i) len += Math.hypot(p[0] - solidPts[i-1][0], p[1] - solidPts[i-1][1]); });
+      path.setAttribute("class", "draw");
+      path.style.setProperty("--len", len);
+      svg.appendChild(path);
+
+      // provisional last segment: dashed, drawn from the last solid point
+      if (opts.provisionalLast) {
+        var pv = el("path", { d: "M" + pts[n-2][0] + " " + pts[n-2][1] + " L" + pts[n-1][0] + " " + pts[n-1][1],
+          fill: "none", stroke: s.color, "stroke-width": "2", "stroke-dasharray": "3 3", "stroke-opacity": "0.7" });
+        svg.appendChild(pv);
+      }
+
+      // end label
+      if (s.label) {
+        var last = pts[pts.length - 1];
+        var lb = el("text", { class: "series-label", x: last[0] + 8, y: last[1] + 4, fill: s.color });
+        lb.textContent = s.label;
+        svg.appendChild(lb);
+      }
+      // endpoint dot
+      var lastP = pts[pts.length - 1];
+      svg.appendChild(el("circle", { cx: lastP[0], cy: lastP[1], r: opts.provisionalLast ? 4 : 4.5,
+        fill: opts.provisionalLast ? "var(--chart-surface)" : s.color, stroke: s.color, "stroke-width": "2" }));
+    });
+
+    // hover
+    var focusLine = el("line", { class: "ref-line hover-dot", y1: m.t, y2: m.t + ih, style: "opacity:0" });
+    svg.appendChild(focusLine);
+    var dots = series.map(function (s) {
+      var c = el("circle", { r: 4, class: "hover-dot", fill: "var(--chart-surface)", stroke: s.color, "stroke-width": "2", style: "opacity:0" });
+      svg.appendChild(c); return c;
+    });
+    for (var i = 0; i < n; i++) {
+      (function (i) {
+        var hit = el("rect", { class: "hit", x: X(i) - (iw / (n - 1)) / 2, y: m.t, width: iw / (n - 1), height: ih });
+        hit.addEventListener("mousemove", function (ev) {
+          focusLine.setAttribute("x1", X(i));
+          focusLine.setAttribute("x2", X(i));
+          focusLine.style.opacity = "0.7";
+          var rows = series.map(function (s, si) {
+            dots[si].setAttribute("cx", X(i)); dots[si].setAttribute("cy", Y(s.values[i])); dots[si].style.opacity = "1";
+            return '<div class="tt-row">' + (s.tipLabel || s.key) + ': <b>' + (s.tipFmt ? s.tipFmt(s.values[i]) : fmt(s.values[i])) + '</b></div>';
+          }).join("");
+          showTip('<div class="tt-h">' + MONTHS[i] + (i === n - 1 && opts.provisionalLast ? ' · provisional' : '') + '</div>' + rows, ev.clientX, ev.clientY);
+        });
+        hit.addEventListener("mouseleave", function () {
+          focusLine.style.opacity = "0"; dots.forEach(function (d) { d.style.opacity = "0"; }); hideTip();
+        });
+        svg.appendChild(hit);
+      })(i);
+    }
+
+    mount.appendChild(svg);
+  }
+
+  // ---- diverging bar chart ----
+  function divergingBars(mountId, rows) {
+    var mount = document.getElementById(mountId);
+    var rowH = 30, padTop = 10, padBottom = 28;
+    var W = 860, H = padTop + rows.length * rowH + padBottom;
+    var labelW = 148, valW = 96;
+    var plotL = labelW, plotW = W - labelW - valW;
+    var maxAbs = 120;
+    function X(v) { return plotL + (plotW * (v + maxAbs)) / (2 * maxAbs); }
+
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": "Percent change in container port calls by port, July 2026 versus pre-crisis baseline." });
+
+    // gridlines
+    [-100, -50, 0, 50, 100].forEach(function (v) {
+      svg.appendChild(el("line", { class: v === 0 ? "axis-line" : "grid-line", x1: X(v), y1: padTop, x2: X(v), y2: H - padBottom }));
+      var t = el("text", { class: "tick", x: X(v), y: H - padBottom + 18, "text-anchor": "middle" });
+      t.textContent = (v > 0 ? "+" : "") + v + "%";
+      svg.appendChild(t);
+    });
+
+    rows.forEach(function (r, i) {
+      var y = padTop + i * rowH;
+      var cy = y + rowH / 2;
+      var pos = r.pct >= 0;
+      var color = pos ? "var(--pos)" : "var(--neg)";
+      var x0 = X(0), x1 = X(Math.max(-maxAbs, Math.min(maxAbs, r.pct)));
+      var bx = Math.min(x0, x1), bw = Math.abs(x1 - x0);
+
+      var bar = el("rect", { x: bx, y: cy - 8, width: Math.max(bw, 1.5), height: 16, rx: 3, fill: color, "fill-opacity": "0.9" });
+      svg.appendChild(bar);
+
+      var nm = el("text", { x: labelW - 12, y: cy + 4, "text-anchor": "end", class: "series-label" });
+      nm.setAttribute("fill", "var(--ink)");
+      nm.textContent = r.name;
+      svg.appendChild(nm);
+
+      var pv = el("text", { x: pos ? x1 + 8 : x1 - 8, y: cy + 4, "text-anchor": pos ? "start" : "end", class: "tick" });
+      pv.setAttribute("fill", color);
+      pv.setAttribute("font-weight", "500");
+      pv.textContent = (pos ? "+" : "") + r.pct + "%";
+      svg.appendChild(pv);
+
+      var abs = el("text", { x: W - 10, y: cy + 4, "text-anchor": "end", class: "tick" });
+      abs.textContent = r.a.toFixed(1) + " → " + r.b.toFixed(1);
+      svg.appendChild(abs);
+
+      var hit = el("rect", { class: "hit", x: 0, y: y, width: W, height: rowH });
+      hit.addEventListener("mousemove", function (ev) {
+        showTip('<div class="tt-h">' + r.name + " (" + r.country + ")</div>" +
+          '<div class="tt-row">Change: <b>' + (pos ? "+" : "") + r.pct + '%</b></div>' +
+          '<div class="tt-row">Calls/day: <b>' + r.a.toFixed(1) + ' → ' + r.b.toFixed(1) + '</b></div>', ev.clientX, ev.clientY);
+      });
+      hit.addEventListener("mouseleave", hideTip);
+      svg.appendChild(hit);
+    });
+
+    mount.appendChild(svg);
+  }
+
+  // build charts
+  lineChart("chart-transits", {
+    aria: "Container ship transits per day through the Strait of Hormuz, monthly from September 2025 to August 2026, showing a collapse from about 13 per day to under 1 per day in March 2026.",
+    series: [{ key: "transits", values: DATA.transits, color: "var(--s1)", area: true, tipLabel: "Transits/day" }],
+    yMax: 20, yTicks: [0, 5, 10, 15, 20],
+    markIndex: 6, markLabel: "Mar 2026",
+    provisionalLast: true
+  });
+
+  lineChart("chart-index", {
+    aria: "Container vessel count and cargo capacity through the Strait of Hormuz, both indexed to the pre-crisis average of 100, falling together to near zero after March 2026.",
+    series: [
+      { key: "count", values: DATA.transits.map(function (v) { return v / PRE_TRANSITS * 100; }), color: "var(--s1)", label: "Count", tipLabel: "Vessel count", tipFmt: function (v) { return Math.round(v) + "%"; } },
+      { key: "capacity", values: DATA.capacity.map(function (v) { return v / PRE_CAPACITY * 100; }), color: "var(--s2)", label: "Capacity", tipLabel: "Cargo capacity", tipFmt: function (v) { return Math.round(v) + "%"; } }
+    ],
+    yMax: 165, yTicks: [0, 50, 100, 150], yFmt: function (v) { return v + "%"; },
+    refLine: 100, refLabel: "pre-crisis",
+    markIndex: 6, markLabel: "Mar 2026"
+  });
+
+  lineChart("chart-jebelali", {
+    aria: "Container port calls per day at Jebel Ali, monthly from September 2025 to August 2026, collapsing from about 13 per day to under 2 per day after March 2026.",
+    series: [{ key: "jaCalls", values: DATA.jaCalls, color: "var(--s1)", area: true, tipLabel: "Calls/day" }],
+    yMax: 16, yTicks: [0, 4, 8, 12, 16],
+    markIndex: 6, markLabel: "Mar 2026"
+  });
+
+  divergingBars("chart-reroute", reroute);
+
+  // data table
+  var tb = document.getElementById("tbl-body");
+  MONTHS.forEach(function (mo, i) {
+    var tr = document.createElement("tr");
+    if (i === 6) tr.className = "break";
+    var crisis = i >= 6;
+    tr.innerHTML =
+      "<td>" + mo + "</td>" +
+      '<td class="' + (crisis ? "cell-crit" : "") + '">' + DATA.transits[i].toFixed(1) + "</td>" +
+      "<td>" + Math.round(DATA.capacity[i]).toLocaleString("en-US") + "</td>" +
+      '<td class="' + (crisis ? "cell-crit" : "") + '">' + DATA.jaCalls[i].toFixed(1) + "</td>" +
+      "<td>" + Math.round(DATA.jaImports[i]).toLocaleString("en-US") + "</td>";
+    tb.appendChild(tr);
+  });
+})();
+</script>

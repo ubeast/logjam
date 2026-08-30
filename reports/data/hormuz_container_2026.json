@@ -1,0 +1,230 @@
+{
+  "meta": {
+    "generated": "2026-08-30T16:18:57+00:00",
+    "data_source": "IMF PortWatch (portwatch.imf.org)",
+    "db_coverage": [
+      "2024-03-13",
+      "2026-08-23"
+    ],
+    "precrisis_window": [
+      "2025-11-01",
+      "2026-03-01"
+    ],
+    "current_clean_month": "2026-07-01",
+    "notes": "PortWatch revises its most recent ~2 weeks upward as more satellite AIS arrives; the headline comparison therefore uses July 2026, not August. Figures are PortWatch estimates, not measured cargo volumes."
+  },
+  "hormuz_chokepoint": {
+    "n_container_monthly": {
+      "2025-09": 16.9,
+      "2025-10": 17.5,
+      "2025-11": 11.6,
+      "2025-12": 9.3,
+      "2026-01": 10.6,
+      "2026-02": 13.2,
+      "2026-03": 0.4,
+      "2026-04": 0.8,
+      "2026-05": 0.3,
+      "2026-06": 1.3,
+      "2026-07": 1.0,
+      "2026-08": 0.3
+    },
+    "capacity_container_monthly": {
+      "2025-09": 438109.4,
+      "2025-10": 464004.5,
+      "2025-11": 297314.7,
+      "2025-12": 295980.6,
+      "2026-01": 314648.1,
+      "2026-02": 368857.9,
+      "2026-03": 9117.4,
+      "2026-04": 18917.3,
+      "2026-05": 3876.8,
+      "2026-06": 23773.7,
+      "2026-07": 17750.1,
+      "2026-08": 3163.4
+    },
+    "n_container_precrisis": 11.1,
+    "n_container_current": 1.0,
+    "n_container_pct_of_normal": 9.0,
+    "capacity_container_precrisis": 318141.3,
+    "capacity_container_current": 17750.1,
+    "capacity_container_pct_of_normal": 5.6
+  },
+  "jebel_ali": {
+    "entity_id": "port744",
+    "name": "Jebel Ali",
+    "iso3": "ARE",
+    "portcalls_container_monthly": {
+      "2025-09": 14.3,
+      "2025-10": 14.3,
+      "2025-11": 13.3,
+      "2025-12": 12.9,
+      "2026-01": 13.0,
+      "2026-02": 13.0,
+      "2026-03": 0.6,
+      "2026-04": 1.5,
+      "2026-05": 0.7,
+      "2026-06": 1.1,
+      "2026-07": 2.3,
+      "2026-08": 1.6
+    },
+    "portcalls_container_precrisis": 13.0,
+    "portcalls_container_current": 2.3,
+    "portcalls_container_pct_of_normal": 17.7,
+    "import_container_monthly": {
+      "2025-09": 264685.5,
+      "2025-10": 295791.2,
+      "2025-11": 268172.4,
+      "2025-12": 269670.1,
+      "2026-01": 313859.0,
+      "2026-02": 304601.3,
+      "2026-03": 13897.8,
+      "2026-04": 32312.7,
+      "2026-05": 15982.6,
+      "2026-06": 19788.2,
+      "2026-07": 42047.0,
+      "2026-08": 37038.0
+    },
+    "import_container_precrisis": 288861.8,
+    "import_container_current": 42047.0,
+    "import_container_pct_of_normal": 14.6,
+    "export_container_monthly": {
+      "2025-09": 234273.8,
+      "2025-10": 252667.6,
+      "2025-11": 242054.9,
+      "2025-12": 227690.9,
+      "2026-01": 241312.9,
+      "2026-02": 250777.1,
+      "2026-03": 13758.7,
+      "2026-04": 30918.8,
+      "2026-05": 15685.1,
+      "2026-06": 21530.4,
+      "2026-07": 47773.2,
+      "2026-08": 27002.2
+    },
+    "export_container_precrisis": 240187.7,
+    "export_container_current": 47773.2,
+    "export_container_pct_of_normal": 19.9
+  },
+  "reroute_candidates": [
+    {
+      "entity_id": "port776",
+      "name": "Mumbai-Jawaharlal Nehru (Nhava Sheva)",
+      "iso3": "IND",
+      "precrisis_calls_per_day": 3.5,
+      "current_calls_per_day": 7.5,
+      "pct_change": 114.0
+    },
+    {
+      "entity_id": "port543",
+      "name": "Karachi",
+      "iso3": "PAK",
+      "precrisis_calls_per_day": 1.3,
+      "current_calls_per_day": 2.6,
+      "pct_change": 100.0
+    },
+    {
+      "entity_id": "port2031",
+      "name": "King Abdullah Port",
+      "iso3": "SAU",
+      "precrisis_calls_per_day": 0.4,
+      "current_calls_per_day": 0.8,
+      "pct_change": 100.0
+    },
+    {
+      "entity_id": "port2039",
+      "name": "Hazira",
+      "iso3": "IND",
+      "precrisis_calls_per_day": 0.6,
+      "current_calls_per_day": 1.1,
+      "pct_change": 83.0
+    },
+    {
+      "entity_id": "port907",
+      "name": "Pipavav Port",
+      "iso3": "IND",
+      "precrisis_calls_per_day": 0.4,
+      "current_calls_per_day": 0.7,
+      "pct_change": 75.0
+    },
+    {
+      "entity_id": "port746",
+      "name": "Salalah",
+      "iso3": "OMN",
+      "precrisis_calls_per_day": 2.1,
+      "current_calls_per_day": 3.1,
+      "pct_change": 48.0
+    },
+    {
+      "entity_id": "port274",
+      "name": "Damietta",
+      "iso3": "EGY",
+      "precrisis_calls_per_day": 1.9,
+      "current_calls_per_day": 2.8,
+      "pct_change": 47.0
+    },
+    {
+      "entity_id": "port777",
+      "name": "Mundra",
+      "iso3": "IND",
+      "precrisis_calls_per_day": 5.5,
+      "current_calls_per_day": 6.1,
+      "pct_change": 11.0
+    },
+    {
+      "entity_id": "port254",
+      "name": "Colombo",
+      "iso3": "LKA",
+      "precrisis_calls_per_day": 9.0,
+      "current_calls_per_day": 8.8,
+      "pct_change": -2.0
+    },
+    {
+      "entity_id": "port908",
+      "name": "Piraeus",
+      "iso3": "GRC",
+      "precrisis_calls_per_day": 6.4,
+      "current_calls_per_day": 6.3,
+      "pct_change": -2.0
+    },
+    {
+      "entity_id": "port988",
+      "name": "Port of Sohar",
+      "iso3": "OMN",
+      "precrisis_calls_per_day": 1.5,
+      "current_calls_per_day": 1.3,
+      "pct_change": -13.0
+    },
+    {
+      "entity_id": "port192",
+      "name": "Port Said",
+      "iso3": "EGY",
+      "precrisis_calls_per_day": 1.3,
+      "current_calls_per_day": 1.0,
+      "pct_change": -23.0
+    },
+    {
+      "entity_id": "port19",
+      "name": "Aqaba",
+      "iso3": "JOR",
+      "precrisis_calls_per_day": 1.5,
+      "current_calls_per_day": 1.1,
+      "pct_change": -27.0
+    },
+    {
+      "entity_id": "port518",
+      "name": "Jeddah",
+      "iso3": "SAU",
+      "precrisis_calls_per_day": 4.7,
+      "current_calls_per_day": 3.1,
+      "pct_change": -34.0
+    },
+    {
+      "entity_id": "port275",
+      "name": "Dammam",
+      "iso3": "SAU",
+      "precrisis_calls_per_day": 2.3,
+      "current_calls_per_day": 0.9,
+      "pct_change": -61.0
+    }
+  ]
+}
