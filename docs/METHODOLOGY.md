@@ -178,14 +178,27 @@ is. `detail` carries the congested port, its drop, and the alternative's lift.
 
 ---
 
-## 7. Report generator
+## 7. Report generators
 
-`scripts/reports/hormuz_container_2026.py` produces the data behind
-`reports/hormuz_container_2026` — see `reports/data/*.json`. It uses an explicit
-fixed **pre-crisis reference window** (Nov 2025 – Feb 2026) rather than the
-rolling YoY baseline, and uses July 2026 as the "current clean" month because
-PortWatch's August figures were still being revised at generation time. Re-run it
-after any `bottleneck refresh` to regenerate the figures.
+`scripts/reports/*.py` produce the **disruption briefs** in `reports/`. Each
+generator queries the local DuckDB store, writes every cited figure to
+`reports/data/<slug>.json`, and renders `<slug>.md` + `<slug>.html` through the
+shared `scripts/reports/_brief.py` (dataclasses + one Markdown/HTML renderer +
+the shared visual system and SVG chart library). `scripts/build_pdfs.py` renders
+each `.html` and this document to PDF.
+
+| Brief | Chokepoint | Event | Baseline |
+|---|---|---|---|
+| `hormuz_container_2026` | Strait of Hormuz (6) | 2026 Iran conflict | Sep–Nov 2023 (reroute §: Sep 2025 – Feb 2026) |
+| `suez_redsea_2026` | Suez Canal (1) | 2023 Red Sea / Houthi crisis | Sep–Nov 2023 |
+| `horn_of_africa_2026` | Bab el-Mandeb (4) | 2023 Red Sea / Houthi crisis | Sep–Nov 2023 |
+
+All three use an explicit **fixed pre-crisis window** rather than the rolling YoY
+baseline (§3b), because by 2026 a trailing baseline treats the disrupted level as
+normal. "Current" figures use the most recent settled month (PortWatch revises
+its last ~2 weeks upward). The briefs need history back to 2023 —
+`BNL_INITIAL_BACKFILL_DAYS=1400 uv run bottleneck refresh --full`. Re-run a
+generator after any `bottleneck refresh` to regenerate its figures.
 
 ---
 

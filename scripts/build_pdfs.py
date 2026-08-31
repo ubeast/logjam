@@ -130,12 +130,23 @@ def md_to_pdf(md_path: Path, pdf_path: Path, *, title: str) -> None:
         tmp.unlink(missing_ok=True)
 
 
+# Every published HTML brief in reports/. Add a slug here when a new
+# scripts/reports/<slug>.py generator lands.
+_BRIEF_SLUGS = (
+    "hormuz_container_2026",
+    "suez_redsea_2026",
+    "horn_of_africa_2026",
+)
+
+
 def main() -> None:
     print("Building PDFs:")
-    html_to_pdf(
-        ROOT / "reports" / "hormuz_container_2026.html",
-        ROOT / "reports" / "hormuz_container_2026.pdf",
-    )
+    for slug in _BRIEF_SLUGS:
+        html = ROOT / "reports" / f"{slug}.html"
+        if html.exists():
+            html_to_pdf(html, html.with_suffix(".pdf"))
+        else:
+            print(f"  (skip {slug}.html - not generated yet)")
     md_to_pdf(
         ROOT / "docs" / "METHODOLOGY.md",
         ROOT / "docs" / "METHODOLOGY.pdf",

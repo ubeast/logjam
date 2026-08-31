@@ -1,11 +1,494 @@
-<title>Hormuz Container Closure</title>
-<meta name="description" content="A separate shock from the Red Sea crisis: the 2026 Iran conflict shut the entrance to the Persian Gulf, and box-ship transits have run near zero for six months." />
+"""Shared machinery for supply-chain disruption briefs.
+
+A brief (Hormuz, Suez / Red Sea, Horn of Africa, ...) is a fixed-window
+before/after read of PortWatch data for one chokepoint plus a reroute analysis.
+Each brief script:
+
+1. queries the local DuckDB store through the helpers here,
+2. assembles a ``payload`` dict and writes it to ``reports/data/<slug>.json``
+   (the reproducible record - every figure the brief cites),
+3. hands ``payload`` plus human-written narrative to :func:`render_markdown`
+   and :func:`render_html`, which emit ``reports/<slug>.md`` / ``.html``.
+
+The narrative prose is written by a person (it interprets the data), but every
+number in it comes from ``payload`` via f-strings, so re-running the script
+after a ``bottleneck refresh`` regenerates a consistent brief.
+
+Design note: the HTML CSS and the SVG chart library are lifted verbatim from
+the first brief (``hormuz_container_2026``) so all briefs share one visual
+system. Only the content is parametrised.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import html
+import json
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import duckdb
+
+from bottleneck_logistics.config import settings
+
+REPORTS_DIR = Path(__file__).resolve().parents[2] / "reports"
+DATA_DIR = REPORTS_DIR / "data"
+REPO_URL = "https://github.com/ubeast/bottleneck-logistics"
+
+
+# --------------------------------------------------------------------------- #
+#  DB helpers
+# --------------------------------------------------------------------------- #
+def connect() -> duckdb.DuckDBPyConnection:
+    return duckdb.connect(str(settings.db_path), read_only=True)
+
+
+def resolve(
+    con: duckdb.DuckDBPyConnection, name_like: str, *, entity_type: str = "port"
+) -> tuple[str, str, str | None] | None:
+    """Return (entity_id, entity_name, iso3) for the highest-volume name match."""
+    row = con.execute(
+        """
+        SELECT entity_id, any_value(entity_name), any_value(iso3)
+        FROM observation
+        WHERE lower(entity_name) LIKE lower(?) AND entity_type = ?
+        GROUP BY entity_id ORDER BY count(*) DESC LIMIT 1
+        """,
+        [name_like, entity_type],
+    ).fetchone()
+    return (row[0], row[1], row[2]) if row else None
+
+
+def monthly(
+    con: duckdb.DuckDBPyConnection, entity_id: str, metric: str, since: dt.date
+) -> dict[str, float]:
+    """Monthly mean of ``metric`` for one entity, keyed 'YYYY-MM'."""
+    rows = con.execute(
+        """
+        SELECT strftime(date_trunc('month', obs_date), '%Y-%m') AS mon, avg(value)
+        FROM observation
+        WHERE entity_id = ? AND metric = ? AND obs_date >= ?
+        GROUP BY 1 ORDER BY 1
+        """,
+        [entity_id, metric, since],
+    ).fetchall()
+    return {m: round(v, 1) for m, v in rows if v is not None}
+
+
+def window_avg(
+    con: duckdb.DuckDBPyConnection,
+    entity_id: str,
+    metric: str,
+    lo: dt.date,
+    hi: dt.date,
+) -> float | None:
+    """Mean of ``metric`` over the half-open window [lo, hi)."""
+    row = con.execute(
+        "SELECT avg(value) FROM observation "
+        "WHERE entity_id = ? AND metric = ? AND obs_date >= ? AND obs_date < ?",
+        [entity_id, metric, lo, hi],
+    ).fetchone()
+    return round(row[0], 1) if row and row[0] is not None else None
+
+
+def pct(now: float | None, base: float | None) -> float | None:
+    """``now`` as a percentage of ``base`` (rounded, 1dp). None if not computable."""
+    if now is None or not base:
+        return None
+    return round(100 * now / base, 1)
+
+
+def pct_change(now: float | None, base: float | None) -> float | None:
+    if now is None or not base:
+        return None
+    return round(100 * (now - base) / base, 0)
+
+
+def month_labels(start: dt.date, count: int) -> list[str]:
+    """['Sep 25', 'Oct 25', ...] - ``count`` months from ``start`` (first of month)."""
+    out: list[str] = []
+    y, m = start.year, start.month
+    for _ in range(count):
+        out.append(dt.date(y, m, 1).strftime("%b %y"))
+        m += 1
+        if m == 13:
+            m, y = 1, y + 1
+    return out
+
+
+def month_keys(start: dt.date, count: int) -> list[str]:
+    out: list[str] = []
+    y, m = start.year, start.month
+    for _ in range(count):
+        out.append(f"{y:04d}-{m:02d}")
+        m += 1
+        if m == 13:
+            m, y = 1, y + 1
+    return out
+
+
+# --------------------------------------------------------------------------- #
+#  Report config
+# --------------------------------------------------------------------------- #
+@dataclass
+class Tile:
+    label: str
+    value: str            # e.g. "9" or "6"
+    unit: str = ""        # e.g. "% of normal"
+    note: str = ""
+    crit: bool = False
+
+
+@dataclass
+class Section:
+    num: str              # "1", "2", ...
+    heading: str
+    body_md: str          # markdown-ish prose (paragraphs, **bold**, *italic*, `code`)
+    lede_md: str | None = None
+    figure: dict[str, Any] | None = None   # {title, sub, chart_id, caption, legend?}
+    callout: tuple[str, str] | None = None  # (label, text)
+
+
+@dataclass
+class LineChart:
+    chart_id: str
+    kind: str = "line"
+    y_max: float = 0
+    y_ticks: list[float] = field(default_factory=list)
+    y_pct: bool = False
+    mark_index: int | None = None
+    mark_label: str = ""
+    marks: list[dict[str, Any]] = field(default_factory=list)  # [{index, label}] extra verticals
+    ref_line: float | None = None
+    ref_label: str = ""
+    provisional_last: bool = False
+    series: list[dict[str, Any]] = field(default_factory=list)  # {values,color,label,tipLabel,area,asPct}
+
+
+@dataclass
+class DivergingChart:
+    chart_id: str
+    kind: str = "diverging"
+    rows: list[dict[str, Any]] = field(default_factory=list)  # {name,country,pct,a,b}
+    max_abs: float = 135
+
+
+@dataclass
+class DataTable:
+    caption: str
+    columns: list[str]
+    rows: list[list[str]]
+    break_row: int | None = None
+    crit_cols: list[int] = field(default_factory=list)
+
+
+@dataclass
+class Brief:
+    slug: str
+    title: str                    # "Hormuz Container Disruption" -> <title> + MD H1
+    kicker: str                   # "Supply-chain disruption brief" -> masthead eyebrow
+    chokepoint_code: str          # "CHOKEPOINT 6" -> status bar
+    data_as_of: str               # "23 Aug 2026"
+    generated: str                # "30 Aug 2026"
+    verdict: str                  # "Severe · Ongoing"
+    verdict_tone: str             # "critical" | "serious" | "warning" | "good"
+    headline: str                 # the h1
+    dek: str
+    months: list[str]             # x-axis labels shared by all line charts
+    tiles: list[Tile]
+    sections: list[Section]
+    charts: list[Any]             # LineChart | DivergingChart
+    table: DataTable
+    method_dl: list[tuple[str, str]]   # (term, definition_md)
+    limitations: list[str]
+
+
+# --------------------------------------------------------------------------- #
+#  Tiny markdown -> inline HTML (paragraphs + ** * ` only)
+# --------------------------------------------------------------------------- #
+def _inline(text: str) -> str:
+    text = html.escape(text, quote=False)
+    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])", r"<em>\1</em>", text)
+    text = re.sub(r"`(.+?)`", r"<code>\1</code>", text)
+    text = text.replace(" -- ", " &mdash; ")
+    return text
+
+
+def _prose_html(body_md: str) -> str:
+    paras = [p.strip() for p in body_md.strip().split("\n\n") if p.strip()]
+    return "\n".join(f"<p>{_inline(p)}</p>" for p in paras)
+
+
+def _strip_md(text: str) -> str:
+    """Plain text from the tiny markdown subset - for the MD kicker line."""
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+    text = re.sub(r"\*(.+?)\*", r"\1", text)
+    text = re.sub(r"`(.+?)`", r"\1", text)
+    return text
+
+
+# --------------------------------------------------------------------------- #
+#  Markdown renderer
+# --------------------------------------------------------------------------- #
+def render_markdown(b: Brief, key_figures: list[tuple[str, str, str, str]]) -> str:
+    """key_figures: list of (metric, now, baseline, pct_of_normal) rows."""
+    L: list[str] = []
+    L.append(f"# {b.title}\n")
+    L.append(f"**{b.kicker} — {_strip_md(b.headline)}**\n")
+    L.append("| | |\n|---|---|")
+    L.append("| **By** | Michael Schertz |")
+    L.append(f"| **Tooling** | [`bottleneck-logistics`]({REPO_URL}) (open-source) |")
+    L.append(f"| **Generated** | {b.generated} |")
+    L.append(f"| **Data as of** | {b.data_as_of} |")
+    L.append("| **Source** | IMF PortWatch (`portwatch.imf.org`) |")
+    L.append(f"| **Verdict** | {b.verdict} |\n")
+    L.append(
+        f"> Charts for this brief are in `{b.slug}.html` and `{b.slug}.pdf`. This "
+        "Markdown version carries the same findings, the underlying monthly "
+        "figures, and the full method.\n"
+    )
+    L.append("---\n")
+    L.append("## Key figures\n")
+    L.append("| Metric | Now | Pre-crisis | vs baseline |\n|---|--:|--:|--:|")
+    for metric, now, base, pn in key_figures:
+        L.append(f"| {metric} | {now} | {base} | **{pn}** |")
+    L.append("")
+    L.append("---\n")
+    for s in b.sections:
+        L.append(f"## {s.num}. {s.heading}\n")
+        if s.lede_md:
+            L.append(f"*{s.lede_md.strip()}*\n")
+        L.append(s.body_md.strip() + "\n")
+        if s.callout:
+            L.append(f"**{s.callout[0]}.** {s.callout[1]}\n")
+    L.append("---\n")
+    L.append("## Method & provenance\n")
+    L.append(
+        "Every figure in this brief is reproducible from a local database built "
+        "by the open-source `bottleneck-logistics` tool and a single generator "
+        "script. Nothing is hand-transcribed.\n"
+    )
+    for term, defn in b.method_dl:
+        L.append(f"**{term}.** {defn}\n")
+    L.append("### Limitations\n")
+    for lim in b.limitations:
+        L.append(f"- {lim}")
+    L.append("")
+    L.append("---\n")
+    L.append(
+        f"*Michael Schertz · built with [`bottleneck-logistics`]({REPO_URL}), an "
+        "open-source logistics bottleneck & opportunity identifier. Data © IMF "
+        "PortWatch, used under its free public-use terms. This document reports "
+        "analysis of public shipping data; it is not affiliated with or endorsed "
+        "by the IMF.*\n"
+    )
+    return "\n".join(L)
+
+
+# --------------------------------------------------------------------------- #
+#  HTML renderer
+# --------------------------------------------------------------------------- #
+def _chart_to_json(c: Any) -> dict[str, Any]:
+    if isinstance(c, LineChart):
+        return {
+            "type": "line",
+            "mount": c.chart_id,
+            "yMax": c.y_max,
+            "yTicks": c.y_ticks,
+            "yPct": c.y_pct,
+            "markIndex": c.mark_index,
+            "markLabel": c.mark_label,
+            "marks": c.marks,
+            "refLine": c.ref_line,
+            "refLabel": c.ref_label,
+            "provisionalLast": c.provisional_last,
+            "series": c.series,
+        }
+    return {
+        "type": "diverging",
+        "mount": c.chart_id,
+        "maxAbs": c.max_abs,
+        "rows": c.rows,
+    }
+
+
+def render_html(b: Brief) -> str:
+    table = b.table
+    tone = b.verdict_tone
+    tiles_html = "\n".join(
+        f'''    <div class="tile">
+      <div class="k">{html.escape(t.label)}</div>
+      <div class="v{' crit' if t.crit else ''}">{html.escape(t.value)}'''
+        + (f'<small>&thinsp;{html.escape(t.unit)}</small>' if t.unit else "")
+        + f'''</div>
+      <div class="note">{html.escape(t.note)}</div>
+    </div>'''
+        for t in b.tiles
+    )
+
+    sections_html: list[str] = []
+    for s in b.sections:
+        parts = [
+            f'  <section>\n    <div class="sec-head">'
+            f'<span class="sec-num">§ {s.num}</span><h2>{_inline(s.heading)}</h2></div>'
+        ]
+        if s.lede_md:
+            parts.append(f'    <p class="lede">{_inline(s.lede_md)}</p>')
+        parts.append(f'    <div class="prose">\n{_prose_html(s.body_md)}\n    </div>')
+        if s.figure:
+            f = s.figure
+            legend = ""
+            if f.get("legend"):
+                items = "".join(
+                    f'<span><i style="background:{c}"></i> {html.escape(lbl)}</span>'
+                    for lbl, c in f["legend"]
+                )
+                legend = f'\n      <div class="legend">{items}</div>'
+            parts.append(
+                f'''    <figure>
+      <div class="fig-top">
+        <p class="fig-title">{html.escape(f["title"])}</p>
+        <p class="fig-sub">{html.escape(f["sub"])}</p>
+      </div>
+      <div class="chart-scroll"><div class="chart" id="{f["chart_id"]}"></div></div>{legend}
+      <figcaption>{_inline(f["caption"])}</figcaption>
+    </figure>'''
+            )
+        if s.callout:
+            parts.append(
+                f'''    <div class="callout">
+      <span class="lbl">{html.escape(s.callout[0])}</span>
+      <p>{_inline(s.callout[1])}</p>
+    </div>'''
+            )
+        parts.append("  </section>")
+        sections_html.append("\n".join(parts))
+
+    thead = "".join(f"<th>{html.escape(c)}</th>" for c in table.columns)
+    tbody_rows = []
+    for i, row in enumerate(table.rows):
+        cls = ' class="break"' if table.break_row == i else ""
+        cells = "".join(
+            f'<td class="{"cell-crit" if j in table.crit_cols and table.break_row is not None and i >= table.break_row else ""}">{html.escape(v)}</td>'
+            for j, v in enumerate(row)
+        )
+        tbody_rows.append(f"<tr{cls}>{cells}</tr>")
+    table_html = f'''  <div class="tbl-wrap">
+    <table>
+      <caption>{html.escape(table.caption)}</caption>
+      <thead><tr>{thead}</tr></thead>
+      <tbody>
+        {"".join(tbody_rows)}
+      </tbody>
+    </table>
+  </div>'''
+
+    method_dl = "\n".join(
+        f"      <dt>{html.escape(term)}</dt>\n      <dd>{_inline(defn)}</dd>"
+        for term, defn in b.method_dl
+    )
+    limits = "\n".join(f"      <li>{_inline(x)}</li>" for x in b.limitations)
+
+    report_json = json.dumps(
+        {"months": b.months, "charts": [_chart_to_json(c) for c in b.charts]}
+    )
+
+    return f"""<title>{html.escape(b.title)}</title>
+<meta name="description" content="{html.escape(_strip_md(b.dek))}" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" />
 
 <style>
+{PAGE_CSS}
+</style>
 
+<div class="statusbar">
+  <div class="wrap">
+    <span class="id">Disruption Brief · {html.escape(b.chokepoint_code)}</span>
+    <span class="sep">/</span>
+    <span class="asof">DATA AS OF {html.escape(b.data_as_of.upper())}</span>
+    <span class="verdict tone-{tone}"><span class="dot"></span>{html.escape(b.verdict)}</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">{html.escape(b.kicker)}</div>
+    <h1>{_inline(b.headline)}</h1>
+    <p class="dek">{_inline(b.dek)}</p>
+    <div class="byline">
+      <span><b>By</b> Michael Schertz</span>
+      <span><b>Tooling</b> <a href="{REPO_URL}">bottleneck-logistics</a> (open-source)</span>
+      <span><b>Generated</b> {html.escape(b.generated)}</span>
+      <span><b>Source</b> IMF PortWatch</span>
+      <span><b>Method</b> see §&nbsp;Method &amp; provenance</span>
+    </div>
+  </header>
+
+  <div class="tiles">
+{tiles_html}
+  </div>
+
+{chr(10).join(sections_html)}
+
+{table_html}
+
+</div>
+
+<section class="method">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">§</span><h2>Method &amp; provenance</h2></div>
+    <div class="prose">
+      <p>Every figure in this brief is reproducible from a local database built by the open-source <code>bottleneck-logistics</code> tool and a single generator script. Nothing is hand-transcribed.</p>
+    </div>
+    <dl>
+{method_dl}
+    </dl>
+    <p class="prose" style="margin-top:2rem"><strong>Limitations</strong></p>
+    <ul class="limits">
+{limits}
+    </ul>
+  </div>
+</section>
+
+<footer class="colophon">
+  <div class="wrap">
+    Michael Schertz · built with <a href="{REPO_URL}">bottleneck-logistics</a>, an open-source logistics bottleneck &amp; opportunity identifier<br />
+    Data © IMF PortWatch, used under its free public-use terms · Brief generated {html.escape(b.generated)}<br />
+    This document reports analysis of public shipping data. It is not affiliated with or endorsed by the IMF.
+  </div>
+</footer>
+
+<div class="tooltip" id="tt" role="status" aria-live="polite"></div>
+
+<script>
+window.REPORT = {report_json};
+{CHART_JS}
+</script>
+"""
+
+
+def write_all(
+    b: Brief,
+    payload: dict[str, Any],
+    key_figures: list[tuple[str, str, str, str]],
+) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    (DATA_DIR / f"{b.slug}.json").write_text(json.dumps(payload, indent=2))
+    (REPORTS_DIR / f"{b.slug}.md").write_text(render_markdown(b, key_figures))
+    (REPORTS_DIR / f"{b.slug}.html").write_text(render_html(b))
+    print(f"wrote reports/data/{b.slug}.json, reports/{b.slug}.md, reports/{b.slug}.html")
+
+
+# --------------------------------------------------------------------------- #
+#  Verbatim CSS from hormuz_container_2026.html (shared visual system)
+# --------------------------------------------------------------------------- #
+PAGE_CSS = r"""
   :root {
     color-scheme: light;
     --paper:        #eaeef0;
@@ -383,211 +866,13 @@
     a { color: var(--accent-ink); text-decoration: none; }
     footer.colophon { padding: 12pt 0 0; }
   }
+"""
 
-</style>
-
-<div class="statusbar">
-  <div class="wrap">
-    <span class="id">Disruption Brief · CHOKEPOINT 6</span>
-    <span class="sep">/</span>
-    <span class="asof">DATA AS OF 23 AUG 2026</span>
-    <span class="verdict tone-critical"><span class="dot"></span>Severe · Ongoing</span>
-  </div>
-</div>
-
-<div class="wrap">
-
-  <header class="masthead">
-    <div class="eyebrow">Supply-chain disruption brief</div>
-    <h1>The Strait of Hormuz has been closed to container ships since March</h1>
-    <p class="dek">A separate shock from the Red Sea crisis: the 2026 Iran conflict shut the entrance to the Persian Gulf, and box-ship transits have run near zero for six months.</p>
-    <div class="byline">
-      <span><b>By</b> Michael Schertz</span>
-      <span><b>Tooling</b> <a href="https://github.com/ubeast/bottleneck-logistics">bottleneck-logistics</a> (open-source)</span>
-      <span><b>Generated</b> 30 Aug 2026</span>
-      <span><b>Source</b> IMF PortWatch</span>
-      <span><b>Method</b> see §&nbsp;Method &amp; provenance</span>
-    </div>
-  </header>
-
-  <div class="tiles">
-    <div class="tile">
-      <div class="k">Hormuz container transits</div>
-      <div class="v crit">7<small>&thinsp;% of normal</small></div>
-      <div class="note">1.0/day now vs 15 pre-crisis</div>
-    </div>
-    <div class="tile">
-      <div class="k">Container cargo capacity</div>
-      <div class="v crit">4<small>&thinsp;% of normal</small></div>
-      <div class="note">Capacity fell as hard as the vessel count</div>
-    </div>
-    <div class="tile">
-      <div class="k">Jebel Ali container calls</div>
-      <div class="v crit">18<small>&thinsp;% of normal</small></div>
-      <div class="note">The Gulf&#x27;s main box hub, effectively offline</div>
-    </div>
-    <div class="tile">
-      <div class="k">Onset</div>
-      <div class="v">Mar<small>&thinsp;2026</small></div>
-      <div class="note">Distinct from the 2023 Red Sea crisis; no recovery trend</div>
-    </div>
-  </div>
-
-  <section>
-    <div class="sec-head"><span class="sec-num">§ 1</span><h2>The finding</h2></div>
-    <p class="lede">Container-ship transits through the Strait of Hormuz have run at roughly <strong>7% of normal</strong> since March 2026 — the Persian Gulf's box trade has effectively stopped.</p>
-    <div class="prose">
-<p>This is the <strong>2026 Strait of Hormuz crisis</strong>, not the Red Sea one. Different chokepoint, two years later: the Red Sea / Houthi disruption (late 2023) diverted the Asia–Europe route around Africa; the Iran conflict (March 2026) closed the entrance to the Persian Gulf.</p>
-<p>IMF PortWatch counted <strong>15 container transits per day</strong> through Hormuz in the clean quarter of late 2023, and the level was steady at about 16 per day through 2025. Since March 2026 it has averaged <strong>under one per day</strong> — 1.0 in July. Container cargo capacity through the strait is at <strong>4% of normal</strong>. The collapse is uniform across classes — tankers are at <strong>9%</strong>, total transits at <strong>11%</strong> — the signature of a route-wide closure, not a commodity-specific restriction.</p>
-    </div>
-  </section>
-  <section>
-    <div class="sec-head"><span class="sec-num">§ 2</span><h2>Stable for three years, then a wall</h2></div>
-    <div class="prose">
-<p>Hormuz traffic is normally seasonal but flat year to year. Container transits held between roughly 13 and 21 per day every quarter from 2023 through 2025 — the 2023 Red Sea crisis, visible as a cliff in the Suez and Bab el-Mandeb data, left Hormuz untouched, because the Gulf oil trade does not use the Red Sea.</p>
-<p>Then the line falls off the table in the first quarter of 2026 and keeps falling into the second. There is no recovery trend through late August.</p>
-    </div>
-    <figure>
-      <div class="fig-top">
-        <p class="fig-title">Strait of Hormuz transits per day — total vs container</p>
-        <p class="fig-sub">Quarterly average, 2023 Q1 – 2026 Q3</p>
-      </div>
-      <div class="chart-scroll"><div class="chart" id="chart-hormuz-trend"></div></div>
-      <div class="legend"><span><i style="background:var(--s1)"></i> Total transits</span><span><i style="background:var(--s2)"></i> Container</span></div>
-      <figcaption>Source: IMF PortWatch, <code>Daily_Chokepoints_Data</code>, chokepoint 6, fields <code>n_total</code> and <code>n_container</code>. Marker: March 2026 crisis onset.</figcaption>
-    </figure>
-  </section>
-  <section>
-    <div class="sec-head"><span class="sec-num">§ 3</span><h2>Blocked, not merely thinned</h2></div>
-    <div class="prose">
-<p>A fall in vessel <em>count</em> could mean fewer, larger ships moving the same cargo. It does not: PortWatch's estimate of the aggregate cargo <em>capacity</em> of transiting container ships is at <strong>4% of pre-crisis</strong> — as low as the count, or lower. The few box ships still using the strait are the smaller ones. Real throughput is gone, not redistributed onto bigger tonnage.</p>
-    </div>
-    <figure>
-      <div class="fig-top">
-        <p class="fig-title">Vessel count and cargo capacity fell together</p>
-        <p class="fig-sub">Hormuz container traffic, indexed to the Sep–Nov 2023 average (= 100)</p>
-      </div>
-      <div class="chart-scroll"><div class="chart" id="chart-hormuz-index"></div></div>
-      <div class="legend"><span><i style="background:var(--s1)"></i> Vessel count</span><span><i style="background:var(--s2)"></i> Cargo capacity</span></div>
-      <figcaption>Source: IMF PortWatch, <code>Daily_Chokepoints_Data</code>. Both series divided by their own pre-crisis mean.</figcaption>
-    </figure>
-    <div class="callout">
-      <span class="lbl">Why this matters</span>
-      <p>If the count fell while capacity held, a count-based alarm would be a false positive. Here both lines hit the floor together.</p>
-    </div>
-  </section>
-  <section>
-    <div class="sec-head"><span class="sec-num">§ 4</span><h2>Two shocks, two chokepoints</h2></div>
-    <p class="lede">The 2024 line and the 2026 line are different events at different straits — and neither one spilled into the other.</p>
-    <div class="prose">
-<p>Put container transits through all three chokepoints on one axis and the picture separates cleanly. <strong>Suez</strong> and <strong>Bab el-Mandeb</strong> fall together in Q1 2024 — the Red Sea / Houthi crisis — and have held at that lower level ever since. <strong>Hormuz</strong> is flat through that whole period, then falls on its own in Q1–Q2 2026 — the Iran conflict.</p>
-<p>The Red Sea route shows almost no <em>additional</em> dip in 2026: the Asia–Europe container trade had already left it, so the Iran crisis had nothing there to divert. The two disruptions stack in cost — the Cape reroute and the Gulf closure are both live — but they are independent in the data.</p>
-    </div>
-    <figure>
-      <div class="fig-top">
-        <p class="fig-title">Container transits per day — Hormuz vs the Red Sea chokepoints</p>
-        <p class="fig-sub">Quarterly average, 2023 Q1 – 2026 Q3</p>
-      </div>
-      <div class="chart-scroll"><div class="chart" id="chart-compare"></div></div>
-      <div class="legend"><span><i style="background:var(--s1)"></i> Strait of Hormuz</span><span><i style="background:var(--s2)"></i> Suez Canal</span><span><i style="background:var(--s3)"></i> Bab el-Mandeb</span></div>
-      <figcaption>Source: IMF PortWatch, <code>Daily_Chokepoints_Data</code>, field <code>n_container</code>. Markers: Q1 2024 Red Sea / Houthi crisis; Q1 2026 Iran / Strait of Hormuz crisis.</figcaption>
-    </figure>
-  </section>
-  <section>
-    <div class="sec-head"><span class="sec-num">§ 5</span><h2>Jebel Ali goes dark</h2></div>
-    <div class="prose">
-<p>Jebel Ali (Dubai) is the Gulf's dominant container port and one of the ten busiest in the world. It sits <em>inside</em> the strait, and it tracked the chokepoint almost exactly: container port calls held at about 13 per day from 2023 through 2025, then <strong>2.3</strong> in July 2026 (<strong>18% of normal</strong>). Estimated container trade volume — imports and exports — is running at <strong>17–22%</strong> of pre-crisis.</p>
-    </div>
-    <figure>
-      <div class="fig-top">
-        <p class="fig-title">Jebel Ali — container port calls per day</p>
-        <p class="fig-sub">Quarterly average, 2023 Q1 – 2026 Q3</p>
-      </div>
-      <div class="chart-scroll"><div class="chart" id="chart-jebelali"></div></div>
-      <figcaption>Source: IMF PortWatch, <code>Daily_Ports_Data</code>, field <code>portcalls_container</code>, port ID <code>port744</code>.</figcaption>
-    </figure>
-  </section>
-  <section>
-    <div class="sec-head"><span class="sec-num">§ 6</span><h2>Where the containers went</h2></div>
-    <div class="prose">
-<p>Cargo that would have moved through the Gulf has rerouted, and not to the usual transshipment hubs. Measured against the six months just before the crisis, container port calls have surged on the <strong>Indian subcontinent's west coast</strong> and at ports positioned <em>outside</em> the strait: Nhava Sheva +108%, Karachi +100%, Salalah +41%, Damietta +40%.</p>
-<p>Saudi Arabia's Red Sea ports (Aqaba -21%, Port Said -29%, Jeddah -31%, Dammam -61%) are <em>down</em> — the Bab el-Mandeb disruption compounds the Gulf one there — and the mega-transshipment hubs that would normally absorb a shock (Colombo, Piraeus) are flat. This section uses the immediate pre-conflict window, not the 2023 baseline, because several of these ports grew on their own over 2023–2025.</p>
-    </div>
-    <figure>
-      <div class="fig-top">
-        <p class="fig-title">Change in container port calls — July 2026 vs pre-conflict</p>
-        <p class="fig-sub">Percent change in daily port-call average, Sep 2025 – Feb 2026 baseline</p>
-      </div>
-      <div class="chart-scroll"><div class="chart" id="chart-reroute"></div></div>
-      <figcaption>Source: IMF PortWatch, <code>Daily_Ports_Data</code>, field <code>portcalls_container</code>. Baseline is the six months before the crisis (not 2023). Absolute rates (calls/day, pre-conflict → July) at right — small ports swing large percentages off a low base.</figcaption>
-    </figure>
-  </section>
-  <section>
-    <div class="sec-head"><span class="sec-num">§ 7</span><h2>Assessment</h2></div>
-    <div class="prose">
-<p>For container shipping the Strait of Hormuz has been functionally closed since March 2026, with no recovery trend through late August. The regional network has partly re-formed around it — Indian west-coast direct calls, Salalah, and Egyptian Mediterranean transshipment are the load-bearing alternatives — at a fraction of the lost volume and longer transit distances. This is a distinct shock from the still-unresolved Red Sea diversion; the two now run in parallel.</p>
-<p>PortWatch measures vessel movements, not their causes: the March 2026 break coincides with the reported Strait of Hormuz crisis, but the data attests to the shipping outcome. Every figure is measured against a fixed 2023 quarter; because Gulf throughput was within ~10% of that level right through 2025, the reference choice does not move the finding.</p>
-    </div>
-  </section>
-
-  <div class="tbl-wrap">
-    <table>
-      <caption>Quarterly figures — Strait of Hormuz and Jebel Ali, containers</caption>
-      <thead><tr><th>Quarter</th><th>Hormuz total/day</th><th>Hormuz container/day</th><th>Hormuz container capacity/day</th><th>Jebel Ali calls/day</th></tr></thead>
-      <tbody>
-        <tr><td class="">23 Q1</td><td class="">83</td><td class="">14.1</td><td class="">412,629</td><td class="">12.9</td></tr><tr><td class="">23 Q2</td><td class="">101</td><td class="">17.8</td><td class="">485,319</td><td class="">13.9</td></tr><tr><td class="">23 Q3</td><td class="">102</td><td class="">17.8</td><td class="">506,808</td><td class="">13.2</td></tr><tr><td class="">23 Q4</td><td class="">82</td><td class="">13.3</td><td class="">406,482</td><td class="">13.1</td></tr><tr><td class="">24 Q1</td><td class="">80</td><td class="">13.3</td><td class="">371,734</td><td class="">13.2</td></tr><tr><td class="">24 Q2</td><td class="">104</td><td class="">17.6</td><td class="">484,477</td><td class="">11.9</td></tr><tr><td class="">24 Q3</td><td class="">100</td><td class="">18.2</td><td class="">488,478</td><td class="">13.0</td></tr><tr><td class="">24 Q4</td><td class="">81</td><td class="">16.0</td><td class="">397,086</td><td class="">14.3</td></tr><tr><td class="">25 Q1</td><td class="">76</td><td class="">15.2</td><td class="">381,430</td><td class="">14.5</td></tr><tr><td class="">25 Q2</td><td class="">102</td><td class="">20.6</td><td class="">503,077</td><td class="">14.0</td></tr><tr><td class="">25 Q3</td><td class="">93</td><td class="">17.6</td><td class="">443,795</td><td class="">14.0</td></tr><tr><td class="">25 Q4</td><td class="">71</td><td class="">12.8</td><td class="">353,032</td><td class="">13.5</td></tr><tr class="break"><td class="">26 Q1</td><td class="">46</td><td class="cell-crit">7.9</td><td class="cell-crit">226,275</td><td class="cell-crit">8.8</td></tr><tr><td class="">26 Q2</td><td class="">8</td><td class="cell-crit">0.8</td><td class="cell-crit">15,395</td><td class="cell-crit">1.1</td></tr><tr><td class="">26 Q3</td><td class="">8</td><td class="cell-crit">0.7</td><td class="cell-crit">11,537</td><td class="cell-crit">2.0</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-</div>
-
-<section class="method">
-  <div class="wrap">
-    <div class="sec-head"><span class="sec-num">§</span><h2>Method &amp; provenance</h2></div>
-    <div class="prose">
-      <p>Every figure in this brief is reproducible from a local database built by the open-source <code>bottleneck-logistics</code> tool and a single generator script. Nothing is hand-transcribed.</p>
-    </div>
-    <dl>
-      <dt>Data source</dt>
-      <dd>IMF PortWatch (portwatch.imf.org) — daily maritime activity estimated from satellite AIS on ~90,000 ships, via the UN Global Platform. Free public use with attribution. Backfill covers 1 Jan 2023 – 23 Aug 2026.</dd>
-      <dt>What the numbers are</dt>
-      <dd><code>n_total</code> / <code>n_container</code> / <code>n_tanker</code> are counts of vessel transits by class at chokepoint 6. <code>capacity_container</code> is the estimated aggregate cargo capacity of transiting container ships. <code>import_container</code> / <code>export_container</code> are PortWatch's modelled trade-volume estimates — directional, not measured TEU.</dd>
-      <dt>Baseline</dt>
-      <dd>Chokepoint transits, capacity, the comparison chart, and Jebel Ali use a fixed <strong>September–November 2023</strong> window, matching the sibling Red Sea briefs — Hormuz throughput was within ~10% of that level every quarter through 2025, so the immediate pre-conflict period gives the same result. The <strong>reroute analysis (§6) uses September 2025 – February 2026</strong> instead, because several candidate ports grew on their own over 2023–2025 and a 2023 comparison would conflate that growth with the diversion. Percent-of-normal = current value ÷ baseline mean.</dd>
-      <dt>“Current” month</dt>
-      <dd><strong>July 2026.</strong> PortWatch revises its most recent ~2 weeks upward as satellite data lands, so August 2026 was still settling at generation time.</dd>
-      <dt>Two crises</dt>
-      <dd>The 2023 Red Sea / Houthi crisis and the 2026 Iran / Strait of Hormuz crisis are separate events at separate chokepoints. The cross-chokepoint chart (§4) plots <code>n_container</code> for Hormuz, Suez, and Bab el-Mandeb on one axis; the Suez and Horn briefs cover the Red Sea side.</dd>
-      <dt>Reroute analysis</dt>
-      <dd>Candidate substitute ports (Indian west coast, Omani and Red Sea ports, Mediterranean and South Asian transshipment hubs) compared on <code>portcalls_container</code>, July 2026 vs Sep 2025 – Feb 2026. Ranked by percent change; absolute rates shown alongside because small ports swing large percentages off a low base.</dd>
-      <dt>Reproduce</dt>
-      <dd>Clone github.com/ubeast/bottleneck-logistics, backfill the database to 2023, then <code>uv run python scripts/reports/hormuz_container_2026.py</code>. Full method in <code>docs/METHODOLOGY.md</code>.</dd>
-    </dl>
-    <p class="prose" style="margin-top:2rem"><strong>Limitations</strong></p>
-    <ul class="limits">
-      <li>PortWatch measures throughput (vessels moving), not queue length or berth dwell time. This brief cannot say how long individual ships waited.</li>
-      <li>The data attests to the shipping outcome, not the cause. The March 2026 onset coincides with the reported Strait of Hormuz crisis; causation is not established here.</li>
-      <li>Trade-volume and capacity fields are model estimates, not manifest data.</li>
-      <li>All comparisons are versus a fixed 2023 quarter; Gulf throughput was stable from 2023 through early 2026, so the choice is not sensitive, but every figure is “versus 2023.”</li>
-      <li>The reroute set only includes ports named in the tool's substitution list; an unlisted beneficiary would be missed.</li>
-    </ul>
-  </div>
-</section>
-
-<footer class="colophon">
-  <div class="wrap">
-    Michael Schertz · built with <a href="https://github.com/ubeast/bottleneck-logistics">bottleneck-logistics</a>, an open-source logistics bottleneck &amp; opportunity identifier<br />
-    Data © IMF PortWatch, used under its free public-use terms · Brief generated 30 Aug 2026<br />
-    This document reports analysis of public shipping data. It is not affiliated with or endorsed by the IMF.
-  </div>
-</footer>
-
-<div class="tooltip" id="tt" role="status" aria-live="polite"></div>
-
-<script>
-window.REPORT = {"months": ["23 Q1", "23 Q2", "23 Q3", "23 Q4", "24 Q1", "24 Q2", "24 Q3", "24 Q4", "25 Q1", "25 Q2", "25 Q3", "25 Q4", "26 Q1", "26 Q2", "26 Q3"], "charts": [{"type": "line", "mount": "chart-hormuz-trend", "yMax": 110, "yTicks": [0, 25, 50, 75, 100], "yPct": false, "markIndex": 12, "markLabel": "Iran crisis", "marks": [], "refLine": null, "refLabel": "", "provisionalLast": false, "series": [{"values": [83.4, 100.9, 102.5, 82.4, 79.9, 103.5, 99.8, 81.3, 76.1, 102.5, 92.6, 70.8, 45.6, 8.0, 7.9], "color": "var(--s1)", "label": "Total", "tipLabel": "Total transits/day", "area": true}, {"values": [14.1, 17.8, 17.8, 13.3, 13.3, 17.6, 18.2, 16.0, 15.2, 20.6, 17.6, 12.8, 7.9, 0.8, 0.7], "color": "var(--s2)", "label": "Container", "tipLabel": "Container transits/day"}]}, {"type": "line", "mount": "chart-hormuz-index", "yMax": 140, "yTicks": [0, 50, 100], "yPct": true, "markIndex": 12, "markLabel": "Iran crisis", "marks": [], "refLine": 100, "refLabel": "pre-crisis", "provisionalLast": false, "series": [{"values": [94.0, 119.0, 119.0, 89.0, 89.0, 117.0, 121.0, 107.0, 101.0, 137.0, 117.0, 85.0, 53.0, 5.0, 5.0], "color": "var(--s1)", "tipLabel": "Vessel count", "asPct": true}, {"values": [91.0, 108.0, 112.0, 90.0, 82.0, 107.0, 108.0, 88.0, 85.0, 112.0, 98.0, 78.0, 50.0, 3.0, 3.0], "color": "var(--s2)", "tipLabel": "Cargo capacity", "asPct": true}]}, {"type": "line", "mount": "chart-compare", "yMax": 25, "yTicks": [0, 5, 10, 15, 20, 25], "yPct": false, "markIndex": null, "markLabel": "", "marks": [{"index": 4, "label": "Red Sea"}, {"index": 12, "label": "Iran"}], "refLine": null, "refLabel": "", "provisionalLast": false, "series": [{"values": [14.1, 17.8, 17.8, 13.3, 13.3, 17.6, 18.2, 16.0, 15.2, 20.6, 17.6, 12.8, 7.9, 0.8, 0.7], "color": "var(--s1)", "label": "Hormuz", "tipLabel": "Hormuz"}, {"values": [17.4, 20.1, 20.8, 18.1, 8.8, 8.7, 8.6, 8.9, 9.1, 9.2, 9.0, 9.5, 8.9, 8.2, 9.1], "color": "var(--s2)", "label": "Suez", "tipLabel": "Suez Canal"}, {"values": [17.6, 19.5, 20.7, 16.1, 4.3, 5.0, 5.6, 6.6, 7.3, 6.6, 6.6, 6.3, 5.7, 5.8, 5.0], "color": "var(--s3)", "label": "Bab", "tipLabel": "Bab el-Mandeb"}]}, {"type": "line", "mount": "chart-jebelali", "yMax": 16, "yTicks": [0, 4, 8, 12, 16], "yPct": false, "markIndex": 12, "markLabel": "Iran crisis", "marks": [], "refLine": null, "refLabel": "", "provisionalLast": false, "series": [{"values": [12.9, 13.9, 13.2, 13.1, 13.2, 11.9, 13.0, 14.3, 14.5, 14.0, 14.0, 13.5, 8.8, 1.1, 2.0], "color": "var(--s1)", "label": "per day", "tipLabel": "Container calls/day", "area": true}]}, {"type": "diverging", "mount": "chart-reroute", "maxAbs": 123.0, "rows": [{"name": "Nhava Sheva", "country": "IND", "pct": 108, "a": 3.6, "b": 7.5}, {"name": "Karachi", "country": "PAK", "pct": 100, "a": 1.3, "b": 2.6}, {"name": "King Abdullah", "country": "SAU", "pct": 100, "a": 0.4, "b": 0.8}, {"name": "Pipavav", "country": "IND", "pct": 75, "a": 0.4, "b": 0.7}, {"name": "Hazira", "country": "IND", "pct": 57, "a": 0.7, "b": 1.1}, {"name": "Salalah", "country": "OMN", "pct": 41, "a": 2.2, "b": 3.1}, {"name": "Damietta", "country": "EGY", "pct": 40, "a": 2.0, "b": 2.8}, {"name": "Mundra", "country": "IND", "pct": 22, "a": 5.0, "b": 6.1}, {"name": "Piraeus", "country": "GRC", "pct": -3, "a": 6.5, "b": 6.3}, {"name": "Colombo", "country": "LKA", "pct": -4, "a": 9.2, "b": 8.8}, {"name": "Port of Sohar", "country": "OMN", "pct": -19, "a": 1.6, "b": 1.3}, {"name": "Aqaba", "country": "JOR", "pct": -21, "a": 1.4, "b": 1.1}, {"name": "Port Said", "country": "EGY", "pct": -29, "a": 1.4, "b": 1.0}, {"name": "Jeddah", "country": "SAU", "pct": -31, "a": 4.5, "b": 3.1}, {"name": "Dammam", "country": "SAU", "pct": -61, "a": 2.3, "b": 0.9}]}]};
-
+# --------------------------------------------------------------------------- #
+#  Chart library - generalised from hormuz_container_2026.html.
+#  Reads window.REPORT = { months: [...], charts: [ {type, mount, ...} ] }.
+# --------------------------------------------------------------------------- #
+CHART_JS = r"""
 (function () {
   "use strict";
   var R = window.REPORT || { months: [], charts: [] };
@@ -779,5 +1064,4 @@ window.REPORT = {"months": ["23 Q1", "23 Q2", "23 Q3", "23 Q4", "24 Q1", "24 Q2"
     else if (c.type === "diverging") divergingBars(c.mount, c.rows, c.maxAbs);
   });
 })();
-
-</script>
+"""

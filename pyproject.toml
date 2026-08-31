@@ -42,6 +42,12 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
+[tool.ruff.lint.per-file-ignores]
+# Report generators and the PDF builder embed long prose / CSS / HTML strings;
+# hard-wrapping them to the column limit hurts readability more than it helps.
+"scripts/reports/*.py" = ["E501"]
+"scripts/build_pdfs.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.11"
 strict = true

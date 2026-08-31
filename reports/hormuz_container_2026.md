@@ -1,230 +1,104 @@
-# Hormuz Container Disruption
+# Hormuz Container Closure
 
-**Supply-chain disruption brief — Strait of Hormuz, container shipping**
+**Supply-chain disruption brief — The Strait of Hormuz has been closed to container ships since March**
 
 | | |
 |---|---|
 | **By** | Michael Schertz |
 | **Tooling** | [`bottleneck-logistics`](https://github.com/ubeast/bottleneck-logistics) (open-source) |
-| **Generated** | 30 August 2026 |
-| **Data as of** | 23 August 2026 |
+| **Generated** | 30 Aug 2026 |
+| **Data as of** | 23 Aug 2026 |
 | **Source** | IMF PortWatch (`portwatch.imf.org`) |
-| **Verdict** | Severe · ongoing |
+| **Verdict** | Severe · Ongoing |
 
-> Charts for this brief are in `hormuz_container_2026.html` and
-> `hormuz_container_2026.pdf`. This Markdown version carries the same findings,
-> the underlying monthly figures, and the full method.
+> Charts for this brief are in `hormuz_container_2026.html` and `hormuz_container_2026.pdf`. This Markdown version carries the same findings, the underlying monthly figures, and the full method.
 
 ---
 
 ## Key figures
 
-| Metric | Now (July 2026) | Pre-crisis | % of normal |
+| Metric | Now | Pre-crisis | vs baseline |
 |---|--:|--:|--:|
-| Hormuz container transits / day | 1.0 | 11.1 | **9 %** |
-| Hormuz container cargo capacity / day | 17,750 | 318,141 | **6 %** |
-| Jebel Ali container port calls / day | 2.3 | 13.0 | **18 %** |
-| Jebel Ali container imports / day (est.) | 42,047 | 288,862 | **15 %** |
-| Jebel Ali container exports / day (est.) | 47,773 | 240,188 | **20 %** |
-
-Duration: onset March 2026, **6 months** with no recovery trend.
+| Hormuz container transits / day | 1.0 | 15 | **7 %** |
+| Hormuz container capacity / day | 17,750 | 451,172 | **4 %** |
+| Hormuz total transits / day | 10 | 92 | **11 %** |
+| Jebel Ali container calls / day | 2.3 | 13 | **18 %** |
+| Jebel Ali container imports / day (est.) | 42,047 | 243,342 | **17 %** |
 
 ---
 
 ## 1. The finding
 
-The question was whether the disruption is **still ongoing or has returned to
-normal**. For container shipping, the answer is unambiguous: ongoing, and total.
+*Container-ship transits through the Strait of Hormuz have run at roughly **7% of normal** since March 2026 — the Persian Gulf's box trade has effectively stopped.*
 
-IMF PortWatch estimates daily vessel movements at 28 maritime chokepoints from
-satellite AIS. Through the Strait of Hormuz — the entrance to the Persian Gulf,
-coded *chokepoint 6* — container-ship transits averaged **11 per day** in the
-four months before March 2026. Since March they have averaged **under one per
-day**, and the most recent clean month (July) sits at **1.0 per day**. August is
-tracking lower still, though PortWatch revises its most recent weeks upward as
-more satellite data arrives, so that figure is provisional.
+This is the **2026 Strait of Hormuz crisis**, not the Red Sea one. Different chokepoint, two years later: the Red Sea / Houthi disruption (late 2023) diverted the Asia–Europe route around Africa; the Iran conflict (March 2026) closed the entrance to the Persian Gulf.
 
-This is not a slowdown. It is the near-complete removal of container shipping
-from the route, sustained for half a year with no upward trend.
+IMF PortWatch counted **15 container transits per day** through Hormuz in the clean quarter of late 2023, and the level was steady at about 16 per day through 2025. Since March 2026 it has averaged **under one per day** — 1.0 in July. Container cargo capacity through the strait is at **4% of normal**. The collapse is uniform across classes — tankers are at **9%**, total transits at **11%** — the signature of a route-wide closure, not a commodity-specific restriction.
 
-## 2. The collapse
+## 2. Stable for three years, then a wall
 
-Container transits held between 9 and 18 per day through February 2026, then fell
-off a cliff in March and have not come back. The brief mid-year uptick — 1.3 per
-day in June — did not hold.
+Hormuz traffic is normally seasonal but flat year to year. Container transits held between roughly 13 and 21 per day every quarter from 2023 through 2025 — the 2023 Red Sea crisis, visible as a cliff in the Suez and Bab el-Mandeb data, left Hormuz untouched, because the Gulf oil trade does not use the Red Sea.
 
-| Month | Transits/day | Month | Transits/day |
-|---|--:|---|--:|
-| Sep 2025 | 16.9 | Mar 2026 | **0.4** |
-| Oct 2025 | 17.5 | Apr 2026 | **0.8** |
-| Nov 2025 | 11.6 | May 2026 | **0.3** |
-| Dec 2025 | 9.3 | Jun 2026 | **1.3** |
-| Jan 2026 | 10.6 | Jul 2026 | **1.0** |
-| Feb 2026 | 13.2 | Aug 2026 | **0.3** (provisional) |
+Then the line falls off the table in the first quarter of 2026 and keeps falling into the second. There is no recovery trend through late August.
 
 ## 3. Blocked, not merely thinned
 
-A drop in *vessel count* alone is ambiguous — it could mean fewer, larger ships
-moving the same cargo. It doesn't. PortWatch also estimates the aggregate cargo
-*capacity* of transiting vessels, and capacity fell in near-perfect lockstep with
-the count — in fact slightly harder. The few box ships still using the strait are
-**smaller** than the pre-crisis norm, not larger.
+A fall in vessel *count* could mean fewer, larger ships moving the same cargo. It does not: PortWatch's estimate of the aggregate cargo *capacity* of transiting container ships is at **4% of pre-crisis** — as low as the count, or lower. The few box ships still using the strait are the smaller ones. Real throughput is gone, not redistributed onto bigger tonnage.
 
-The collapse is also **uniform across every cargo class** — tankers, containers,
-dry bulk, ro-ro all fell to between zero and roughly 15 % of a year earlier. That
-is the signature of a route-wide closure, not a commodity-specific restriction,
-which would gut tankers while sparing containers.
+**Why this matters.** If the count fell while capacity held, a count-based alarm would be a false positive. Here both lines hit the floor together.
 
-| Month | Count (% of pre-crisis) | Capacity (% of pre-crisis) |
-|---|--:|--:|
-| Sep 2025 | 152 % | 138 % |
-| Oct 2025 | 158 % | 146 % |
-| Nov 2025 | 105 % | 93 % |
-| Dec 2025 | 84 % | 93 % |
-| Jan 2026 | 95 % | 99 % |
-| Feb 2026 | 119 % | 116 % |
-| Mar 2026 | 4 % | 3 % |
-| Apr 2026 | 7 % | 6 % |
-| May 2026 | 3 % | 1 % |
-| Jun 2026 | 12 % | 7 % |
-| Jul 2026 | 9 % | 6 % |
-| Aug 2026 | 3 % | 1 % |
+## 4. Two shocks, two chokepoints
 
-**Why this matters.** If the count had dropped while capacity held, a count-based
-alarm would be a false positive — cargo still flowing on bigger ships. Here both
-lines fall to the floor together: real throughput is gone.
+*The 2024 line and the 2026 line are different events at different straits — and neither one spilled into the other.*
 
-## 4. Jebel Ali goes dark
+Put container transits through all three chokepoints on one axis and the picture separates cleanly. **Suez** and **Bab el-Mandeb** fall together in Q1 2024 — the Red Sea / Houthi crisis — and have held at that lower level ever since. **Hormuz** is flat through that whole period, then falls on its own in Q1–Q2 2026 — the Iran conflict.
 
-Jebel Ali (Dubai) is the Gulf's dominant container port and one of the ten
-busiest in the world — the region's transshipment anchor. It sits *inside* the
-strait. Its container operation tracked the chokepoint almost exactly: ~13
-container port calls per day through February, then **0.6 in March**, recovering
-only to ~2 per day by mid-summer. Estimated container trade volume — imports and
-exports — is running at **15–20 % of pre-crisis levels**.
+The Red Sea route shows almost no *additional* dip in 2026: the Asia–Europe container trade had already left it, so the Iran crisis had nothing there to divert. The two disruptions stack in cost — the Cape reroute and the Gulf closure are both live — but they are independent in the data.
 
-| Month | Calls/day | Imports/day (est.) | Exports/day (est.) |
-|---|--:|--:|--:|
-| Nov 2025 | 13.3 | 268,172 | 242,055 |
-| Dec 2025 | 12.9 | 269,670 | 227,691 |
-| Jan 2026 | 13.0 | 313,859 | 241,313 |
-| Feb 2026 | 13.0 | 304,601 | 250,777 |
-| Mar 2026 | 0.6 | 13,898 | 13,759 |
-| Apr 2026 | 1.5 | 32,313 | 30,919 |
-| May 2026 | 0.7 | 15,983 | 15,685 |
-| Jun 2026 | 1.1 | 19,788 | 21,530 |
-| Jul 2026 | 2.3 | 42,047 | 47,773 |
-| Aug 2026 | 1.6 | 37,038 | 27,002 |
+## 5. Jebel Ali goes dark
 
-## 5. Where the containers went
+Jebel Ali (Dubai) is the Gulf's dominant container port and one of the ten busiest in the world. It sits *inside* the strait, and it tracked the chokepoint almost exactly: container port calls held at about 13 per day from 2023 through 2025, then **2.3** in July 2026 (**18% of normal**). Estimated container trade volume — imports and exports — is running at **17–22%** of pre-crisis.
 
-Cargo that would have moved through the Gulf has rerouted — and not to the usual
-transshipment hubs. Comparing July 2026 with the pre-crisis baseline, container
-port calls surged on the **Indian subcontinent's west coast** (Nhava Sheva up
-114 %, plus Hazira, Pipavav, Mundra, and Karachi), at **Salalah** in Oman —
-outside the strait, the natural regional substitute — and at **Damietta** on
-Egypt's Mediterranean coast.
+## 6. Where the containers went
 
-The mega-transshipment hubs that would normally absorb a shock — **Colombo and
-Piraeus** — are flat. And Saudi Arabia's Red Sea ports (**Jeddah, Dammam**) are
-*down*, because the Bab-el-Mandeb disruption compounds the Gulf one.
+Cargo that would have moved through the Gulf has rerouted, and not to the usual transshipment hubs. Measured against the six months just before the crisis, container port calls have surged on the **Indian subcontinent's west coast** and at ports positioned *outside* the strait: Nhava Sheva +108%, Karachi +100%, Salalah +41%, Damietta +40%.
 
-| Port | Country | Calls/day (pre-crisis → July) | Change |
-|---|---|--:|--:|
-| Nhava Sheva | IN | 3.5 → 7.5 | **+114 %** |
-| Karachi | PK | 1.3 → 2.6 | +100 % |
-| King Abdullah | SA | 0.4 → 0.8 | +100 % |
-| Hazira | IN | 0.6 → 1.1 | +83 % |
-| Pipavav | IN | 0.4 → 0.7 | +75 % |
-| Salalah | OM | 2.1 → 3.1 | +48 % |
-| Damietta | EG | 1.9 → 2.8 | +47 % |
-| Mundra | IN | 5.5 → 6.1 | +11 % |
-| Colombo | LK | 9.0 → 8.8 | −2 % |
-| Piraeus | GR | 6.4 → 6.3 | −2 % |
-| Sohar | OM | 1.5 → 1.3 | −13 % |
-| Port Said | EG | 1.3 → 1.0 | −23 % |
-| Aqaba | JO | 1.5 → 1.1 | −27 % |
-| Jeddah | SA | 4.7 → 3.1 | −34 % |
-| Dammam | SA | 2.3 → 0.9 | −61 % |
+Saudi Arabia's Red Sea ports (Aqaba -21%, Port Said -29%, Jeddah -31%, Dammam -61%) are *down* — the Bab el-Mandeb disruption compounds the Gulf one there — and the mega-transshipment hubs that would normally absorb a shock (Colombo, Piraeus) are flat. This section uses the immediate pre-conflict window, not the 2023 baseline, because several of these ports grew on their own over 2023–2025.
 
-Ports below ~1 call/day pre-crisis show large percentages off a small base — read
-the absolute figures alongside.
+## 7. Assessment
 
-## 6. Assessment
+For container shipping the Strait of Hormuz has been functionally closed since March 2026, with no recovery trend through late August. The regional network has partly re-formed around it — Indian west-coast direct calls, Salalah, and Egyptian Mediterranean transshipment are the load-bearing alternatives — at a fraction of the lost volume and longer transit distances. This is a distinct shock from the still-unresolved Red Sea diversion; the two now run in parallel.
 
-For container shipping, the Strait of Hormuz is functionally closed and has been
-since March 2026. There is no recovery trend in the data through late August. The
-regional container network has partly re-formed around it — Indian west-coast
-direct calls, Salalah, and Egyptian Mediterranean transshipment are the
-load-bearing alternatives — but at a fraction of the lost volume and at longer
-transit distances.
-
-Two caveats bound this read. First, PortWatch measures vessel movements, not the
-reasons for them; the March break coincides with the reported *2026 Strait of
-Hormuz crisis*, but the data attests to the shipping outcome, not its cause.
-Second, the year-over-year framing answers "still abnormal versus a year ago" —
-accurate for an event this age, but it would read "recovered" for any disruption
-older than a year, when both the current and the reference figure are depressed.
+PortWatch measures vessel movements, not their causes: the March 2026 break coincides with the reported Strait of Hormuz crisis, but the data attests to the shipping outcome. Every figure is measured against a fixed 2023 quarter; because Gulf throughput was within ~10% of that level right through 2025, the reference choice does not move the finding.
 
 ---
 
 ## Method & provenance
 
-Every figure in this brief is reproducible from a local database built by the
-open-source `bottleneck-logistics` tool and a single generator script. Nothing is
-hand-transcribed.
+Every figure in this brief is reproducible from a local database built by the open-source `bottleneck-logistics` tool and a single generator script. Nothing is hand-transcribed.
 
-**Data source.** IMF PortWatch (`portwatch.imf.org`) — daily maritime activity
-estimated from satellite AIS on ~90,000 ships, via the UN Global Platform. Two
-ArcGIS feature layers: `Daily_Ports_Data` and `Daily_Chokepoints_Data`. Free
-public use with attribution. Backfill covers 13 Mar 2024 – 23 Aug 2026.
+**Data source.** IMF PortWatch (portwatch.imf.org) — daily maritime activity estimated from satellite AIS on ~90,000 ships, via the UN Global Platform. Free public use with attribution. Backfill covers 1 Jan 2023 – 23 Aug 2026.
 
-**What the numbers are.** `n_container` / `portcalls_container` are counts of
-container-ship transits and port calls. `capacity_container` is the estimated
-aggregate cargo capacity of those vessels, derived from ship particulars.
-`import_container` / `export_container` are PortWatch's modelled trade-volume
-estimates — directional, not measured TEU.
+**What the numbers are.** `n_total` / `n_container` / `n_tanker` are counts of vessel transits by class at chokepoint 6. `capacity_container` is the estimated aggregate cargo capacity of transiting container ships. `import_container` / `export_container` are PortWatch's modelled trade-volume estimates — directional, not measured TEU.
 
-**Baseline.** The pre-crisis reference is a fixed window, **November 2025 –
-February 2026** — the last four stable months before the March break — rather than
-a rolling baseline, which by mid-2026 would have absorbed the collapse into its
-own "normal." Percent-of-normal = current value ÷ pre-crisis mean.
+**Baseline.** Chokepoint transits, capacity, the comparison chart, and Jebel Ali use a fixed **September–November 2023** window, matching the sibling Red Sea briefs — Hormuz throughput was within ~10% of that level every quarter through 2025, so the immediate pre-conflict period gives the same result. The **reroute analysis (§6) uses September 2025 – February 2026** instead, because several candidate ports grew on their own over 2023–2025 and a 2023 comparison would conflate that growth with the diversion. Percent-of-normal = current value ÷ baseline mean.
 
-**"Current" month.** July 2026. PortWatch revises its most recent ~2 weeks upward
-as satellite data lands, so August was still settling at generation time and is
-shown for context only, marked provisional.
+**“Current” month.** **July 2026.** PortWatch revises its most recent ~2 weeks upward as satellite data lands, so August 2026 was still settling at generation time.
 
-**Reroute analysis.** Candidate substitute ports (Indian west coast, Omani and
-Red Sea ports, Mediterranean and South Asian transshipment hubs) compared on
-`portcalls_container`, July 2026 vs the same pre-crisis window. Ranked by percent
-change; absolute rates shown alongside because small ports swing large
-percentages off a low base.
+**Two crises.** The 2023 Red Sea / Houthi crisis and the 2026 Iran / Strait of Hormuz crisis are separate events at separate chokepoints. The cross-chokepoint chart (§4) plots `n_container` for Hormuz, Suez, and Bab el-Mandeb on one axis; the Suez and Horn briefs cover the Red Sea side.
 
-**Reproduce.** Clone
-<https://github.com/ubeast/bottleneck-logistics>, run `bottleneck refresh --full`
-to build the database, then
-`uv run python scripts/reports/hormuz_container_2026.py`. Full method — including
-the tool's short and year-over-year baselines and its bottleneck / recovery /
-opportunity logic — in [`docs/METHODOLOGY.md`](../docs/METHODOLOGY.md).
+**Reroute analysis.** Candidate substitute ports (Indian west coast, Omani and Red Sea ports, Mediterranean and South Asian transshipment hubs) compared on `portcalls_container`, July 2026 vs Sep 2025 – Feb 2026. Ranked by percent change; absolute rates shown alongside because small ports swing large percentages off a low base.
+
+**Reproduce.** Clone github.com/ubeast/bottleneck-logistics, backfill the database to 2023, then `uv run python scripts/reports/hormuz_container_2026.py`. Full method in `docs/METHODOLOGY.md`.
 
 ### Limitations
 
-- PortWatch measures throughput (vessels moving), not queue length or berth dwell
-  time. This brief cannot say how long individual ships waited.
-- The data attests to the shipping outcome, not the cause. The March 2026 onset
-  coincides with the reported Strait of Hormuz crisis; causation is not
-  established here.
-- Trade-volume and capacity fields are model estimates, not manifest data —
-  directionally sound, not exact.
-- The year-over-year lens reads "recovered" for any disruption older than ~1 year;
-  this brief uses an explicit fixed pre-crisis window to avoid that.
-- The reroute set only includes ports named in the tool's substitution list; an
-  unlisted beneficiary would be missed.
+- PortWatch measures throughput (vessels moving), not queue length or berth dwell time. This brief cannot say how long individual ships waited.
+- The data attests to the shipping outcome, not the cause. The March 2026 onset coincides with the reported Strait of Hormuz crisis; causation is not established here.
+- Trade-volume and capacity fields are model estimates, not manifest data.
+- All comparisons are versus a fixed 2023 quarter; Gulf throughput was stable from 2023 through early 2026, so the choice is not sensitive, but every figure is “versus 2023.”
+- The reroute set only includes ports named in the tool's substitution list; an unlisted beneficiary would be missed.
 
 ---
 
-*Michael Schertz · built with
-[`bottleneck-logistics`](https://github.com/ubeast/bottleneck-logistics), an
-open-source logistics bottleneck & opportunity identifier. Data © IMF PortWatch,
-used under its free public-use terms. This document reports analysis of public
-shipping data; it is not affiliated with or endorsed by the IMF.*
+*Michael Schertz · built with [`bottleneck-logistics`](https://github.com/ubeast/bottleneck-logistics), an open-source logistics bottleneck & opportunity identifier. Data © IMF PortWatch, used under its free public-use terms. This document reports analysis of public shipping data; it is not affiliated with or endorsed by the IMF.*

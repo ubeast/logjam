@@ -104,8 +104,9 @@ src/bottleneck_logistics/
 ├── pipeline.py                   refresh() = the whole chain
 └── cli.py                        `bottleneck` command
 scripts/refresh.py                cron entry point
-scripts/reports/                  one-off analysis generators (JSON in reports/data/)
-reports/                          published briefs (HTML) + their source data
+scripts/reports/                  disruption-brief generators (_brief.py = shared renderer)
+scripts/build_pdfs.py             render every brief HTML + METHODOLOGY.md to PDF
+reports/                          published briefs (.json / .md / .html / .pdf)
 docs/METHODOLOGY.md               how baselines, detection, and recovery work
 .github/workflows/refresh.yml     weekly automated refresh
 ```
@@ -115,12 +116,33 @@ docs/METHODOLOGY.md               how baselines, detection, and recovery work
 `reports/` holds finished analytical briefs backed by reproducible generator
 scripts in `scripts/reports/`. Each script re-derives every figure from the local
 DuckDB store — nothing is hand-transcribed — and writes its data to
-`reports/data/*.json`.
+`reports/data/*.json`. All three briefs share one visual system and renderer
+(`scripts/reports/_brief.py`); each generator emits `.json` + `.md` + `.html`,
+and `scripts/build_pdfs.py` renders the `.pdf`.
 
 - **`reports/hormuz_container_2026.html`** — container shipping through the Strait
-  of Hormuz, March–August 2026: the collapse, count-vs-capacity confirmation, and
+  of Hormuz after the **2026 Iran conflict** (a separate shock from the Red Sea
+  crisis): transits at ~7% of a fixed 2023 baseline since March 2026, Jebel Ali
+  at ~18%, a cross-chokepoint chart showing the two crises are independent, and
   the reroute to Indian west-coast / Salalah / Egyptian Mediterranean ports.
-  Regenerate: `uv run python scripts/reports/hormuz_container_2026.py`.
+  `uv run python scripts/reports/hormuz_container_2026.py`
+- **`reports/suez_redsea_2026.html`** — the Suez Canal two and a half years into
+  the Red Sea diversion: total transits back to ~55% of pre-crisis on tankers and
+  bulk, container transits stuck at ~46% with no recovery trend, and the Cape of
+  Good Hope carrying the diverted box trade (+230%).
+  `uv run python scripts/reports/suez_redsea_2026.py`
+- **`reports/horn_of_africa_2026.html`** — the Bab el-Mandeb Strait (the southern
+  Red Sea gate at the Horn of Africa): containers at ~27% of pre-crisis and
+  capacity at ~7%, a provisional mid-2026 dip that lines up with the Hormuz
+  crisis, Djibouti holding as the regional anchor, and Saudi Red Sea ports
+  (Jeddah −55%, King Abdullah −67%) as the biggest port-level casualties.
+  `uv run python scripts/reports/horn_of_africa_2026.py`
+
+All three briefs compare against a **fixed pre-crisis 2023 quarter** (the Hormuz
+brief's reroute section uses the immediate pre-conflict months instead, since
+some candidate ports grew organically over 2023–2025). They need the store
+backfilled past the default 900-day window —
+`BNL_INITIAL_BACKFILL_DAYS=1400 uv run bottleneck refresh --full`.
 
 Method and limitations for everything the tool produces: **[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md)**.
 
