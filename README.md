@@ -53,7 +53,7 @@ detail in [`docs/METHODOLOGY.md` §1a](docs/METHODOLOGY.md).
 |---|---|---|---|
 | [IMF PortWatch](https://portwatch.imf.org) | yes | free, keyless | Daily port calls + trade volume for ~2,065 ports; daily transit counts for 28 chokepoints. Weekly refresh (Tue). |
 | [AISStream.io](https://aisstream.io) | adapter built | free, free key | Sampled live AIS -> anchorage-queue + transit counts. Needs `LOGJAM_AISSTREAM_API_KEY`. **Terrestrial-only: no coverage in the Gulf / Red Sea** — use a European port, or a paid satellite-AIS feed for v1's geography. |
-| [GDELT](https://www.gdeltproject.org) | yes | free, keyless | News-attention per chokepoint (`gdelt_volume` / `gdelt_tone`) — the *why* behind a throughput drop, and often a few days ahead of it. DOC 2.0 API is slow (10–60 s/call) and 90-day window, so it runs as its own step (`logjam news-fetch`), not on every refresh. |
+| [GDELT](https://www.gdeltproject.org) | yes | free, keyless | News-attention per chokepoint (`gdelt_volume` / `gdelt_tone`) — the *why* behind a throughput drop, and often a few days ahead of it. DOC 2.0 API throttles per-IP (~1 req/5 s) and only serves 90 days, so it runs as its own step (`logjam news-fetch` ≈ 2–3 min), not on every refresh. |
 | [Freightos Baltic Index](https://fbx.freightos.com) | dropped | not free | Container spot rates would be a great leading signal, but FBX needs a paid subscription — no API. Revisit if a free rate feed appears. |
 | Canal authorities (Suez, Panama) | planned | free | Official transit stats + draft-restriction notices — ground-truth cross-check on chokepoint counts. |
 

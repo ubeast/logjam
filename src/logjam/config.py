@@ -42,12 +42,13 @@ class Settings(BaseSettings):
     # ~the last 3 months, so this is a collect-forward source - each refresh
     # pulls the trailing window and the store keeps history past the API window.
     gdelt_doc_url: str = "https://api.gdeltproject.org/api/v2/doc/doc"
-    gdelt_request_pause_s: float = 1.5   # space out calls; the API 429s aggressively
-    gdelt_timeout_s: float = 90.0        # the DOC API is often very slow (10-60s/call)
+    gdelt_request_pause_s: float = 5.0   # GDELT throttles per-IP at ~1 req / 5 s
+    gdelt_timeout_s: float = 90.0        # healthy ~1-2 s/call; 10-60 s once throttled
     gdelt_max_lookback_days: int = 89    # DOC 2.0 only answers for roughly the last 3 months
-    # The DOC API is slow enough that folding ~20 calls into every `refresh` can
-    # add minutes. Off by default; run `logjam news-fetch` (or its own CI cron)
-    # instead, or set LOGJAM_GDELT_ON_REFRESH=true to include it.
+    # A full pull is ~22 calls; at the 5 s pace that's ~2-3 min. Kept off the
+    # every-`refresh` path so a throttled GDELT never slows a routine refresh.
+    # Run `logjam news-fetch` (or its own CI cron), or set
+    # LOGJAM_GDELT_ON_REFRESH=true to include it.
     gdelt_on_refresh: bool = False
 
     # --- Backfill window ---------------------------------------------------

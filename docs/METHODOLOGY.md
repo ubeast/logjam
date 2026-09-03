@@ -112,9 +112,11 @@ same trailing baseline.
 
 **Limitations.** (1) The DOC API only serves ~the last three months, so this is
 a *collect-forward* source — `logjam news-fetch` pulls the trailing window and
-the store keeps history past what the API still returns. (2) The API is slow
-(10–60 s per call) and rate-limits hard; the adapter tolerates partial failure
-and it is not run on every `refresh` (`gdelt_on_refresh`, default off).
+the store keeps history past what the API still returns. (2) The API throttles
+per-IP at roughly one request every 5 s (calls that overrun get HTTP 429s and
+10–60 s response times); a full pull is ~22 calls paced at `gdelt_request_pause_s`,
+so ~2–3 min. The adapter tolerates partial failure and it is kept off the
+every-`refresh` path (`gdelt_on_refresh`, default off).
 (3) Attention is a *coincident-to-leading* proxy, not a flow measurement — it is
 context for a throughput signal, and is **not** turned into a bottleneck signal
 of its own (surfaced via `logjam news`, cross-referencing is on the roadmap).
