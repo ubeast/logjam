@@ -204,6 +204,20 @@ set covers the major trade lanes; extend it for yours.
 
 ## Roadmap
 
+### Reports
+- [x] Diversion map — real Natural Earth basemap, one bubble per affected port,
+      green/red = calls gained/lost, bubble size = magnitude, port country in the
+      tooltip (`MapChart` in `scripts/reports/_brief.py`). Live in the **Hormuz**
+      brief §6.
+- [ ] Diversion map for the **Suez/Red Sea** and **Horn of Africa** briefs. Those
+      are chokepoint-transit-collapse stories (the diversion is "around the Cape",
+      not port-to-port), so it needs a per-brief port-change analysis, not just a
+      component drop-in — but Jeddah/King Abdullah losses would map well.
+- [ ] Vessel-route visualization (a service's port rotation, start→end). Blocked:
+      no per-vessel source — needs a hand-curated `resources/services.yaml`
+      schematic, or a paid satellite-AIS feed. See [`docs/METHODOLOGY.md` §1a](docs/METHODOLOGY.md).
+
+### Pipeline
 - [x] Year-over-year baseline so sustained disruptions stay visible (`recovery`).
 - [ ] Trailing-days guard: exclude the most recent ~3 days from `bottlenecks` and
       treat a sudden exact-zero on a high-baseline series as missing data.

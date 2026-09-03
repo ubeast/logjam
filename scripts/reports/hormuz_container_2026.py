@@ -38,6 +38,7 @@ from _brief import (  # noqa: E402
     Section,
     Tile,
     connect,
+    country_of,
     pct,
     pct_change,
     resolve,
@@ -297,12 +298,17 @@ def main() -> None:
         pc = pct_override if pct_override is not None else pct_change(b, a)
         short = _short(name)
         side, dy = _LABEL_SIDE.get(short, ("right", 0.0))
-        map_points.append({
+        point = {
             "name": short, "lon": round(lon, 4), "lat": round(lat, 4),
             "delta": delta, "pct": round(pc, 0) if pc is not None else 0.0,
             "role": role or ("gain" if delta >= 0 else "loss"),
             "labelSide": side, "labelDy": dy,
-        })
+        }
+        if role != "chokepoint":  # a strait is in no single country
+            country = country_of(con, eid)
+            if country:
+                point["country"] = country
+        map_points.append(point)
 
     _map_point(HORMUZ, "Strait of Hormuz", h_con["precrisis"], h_con["current"],
                role="chokepoint", pct_override=h_con["pct_change"])

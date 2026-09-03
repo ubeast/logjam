@@ -61,6 +61,15 @@ def resolve(
     return (row[0], row[1], row[2]) if row else None
 
 
+def country_of(con: duckdb.DuckDBPyConnection, entity_id: str) -> str | None:
+    """Full country name for a port entity (from PortWatch's own `country` column)."""
+    row = con.execute(
+        "SELECT any_value(country) FROM observation WHERE entity_id = ? AND country IS NOT NULL",
+        [entity_id],
+    ).fetchone()
+    return row[0] if row and row[0] else None
+
+
 def monthly(
     con: duckdb.DuckDBPyConnection, entity_id: str, metric: str, since: dt.date
 ) -> dict[str, float]:
@@ -184,9 +193,10 @@ class MapChart:
     LineString/MultiLineString) from ``assets/geo/basemap_mideast.json`` via
     :mod:`_geo`. ``bbox`` is ``[minlon, minlat, maxlon, maxlat]`` and drives a
     Web-Mercator projection in the browser. Each point:
-        {name, lon, lat, delta, pct, role}
+        {name, lon, lat, delta, pct, role, country?}
     ``role`` is ``"gain"`` | ``"loss"`` | ``"chokepoint"``; ``delta`` is the
-    signed absolute change and sizes the bubble, ``pct`` the percent change.
+    signed absolute change and sizes the bubble, ``pct`` the percent change;
+    ``country`` (optional) is the port's country, shown in the tooltip.
     """
 
     chart_id: str
@@ -1328,7 +1338,8 @@ CHART_JS = r"""
           ? '<div class="tt-row">Container transits: <b>' + ps + ' of pre-crisis change</b></div>'
           : '<div class="tt-row">Container calls: <b>' + ps + '</b></div>' +
             '<div class="tt-row">Change: <b>' + (p.delta >= 0 ? "+" : "") + fmt(p.delta) + " " + (opts.sizeUnit || "") + '</b></div>';
-        showTip('<div class="tt-h">' + p.name + '</div>' + rows, ev.clientX, ev.clientY);
+        var head = p.name + (p.country ? " (" + p.country + ")" : "");
+        showTip('<div class="tt-h">' + head + '</div>' + rows, ev.clientX, ev.clientY);
       });
       hit.addEventListener("mouseleave", hideTip);
       svg.appendChild(hit);

@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated": "2026-09-01T03:07:05+00:00",
+    "generated": "2026-09-03T02:59:05+00:00",
     "data_source": "IMF PortWatch (portwatch.imf.org)",
     "db_coverage": [
       "2023-01-01",
@@ -433,7 +433,8 @@
         "pct": -82.0,
         "role": "loss",
         "labelSide": "left",
-        "labelDy": 30.0
+        "labelDy": 30.0,
+        "country": "United Arab Emirates"
       },
       {
         "name": "Nhava Sheva",
@@ -443,7 +444,8 @@
         "pct": 108.0,
         "role": "gain",
         "labelSide": "right",
-        "labelDy": 0.0
+        "labelDy": 0.0,
+        "country": "India"
       },
       {
         "name": "Karachi",
@@ -453,7 +455,8 @@
         "pct": 100.0,
         "role": "gain",
         "labelSide": "right",
-        "labelDy": -12.0
+        "labelDy": -12.0,
+        "country": "Pakistan"
       },
       {
         "name": "Salalah",
@@ -463,7 +466,8 @@
         "pct": 41.0,
         "role": "gain",
         "labelSide": "left",
-        "labelDy": 0.0
+        "labelDy": 0.0,
+        "country": "Oman"
       },
       {
         "name": "Damietta",
@@ -473,7 +477,8 @@
         "pct": 40.0,
         "role": "gain",
         "labelSide": "right",
-        "labelDy": 0.0
+        "labelDy": 0.0,
+        "country": "Egypt"
       },
       {
         "name": "Mundra",
@@ -483,7 +488,8 @@
         "pct": 22.0,
         "role": "gain",
         "labelSide": "right",
-        "labelDy": 0.0
+        "labelDy": 0.0,
+        "country": "India"
       },
       {
         "name": "Jeddah",
@@ -493,7 +499,8 @@
         "pct": -31.0,
         "role": "loss",
         "labelSide": "left",
-        "labelDy": 0.0
+        "labelDy": 0.0,
+        "country": "Saudi Arabia"
       },
       {
         "name": "Dammam",
@@ -503,7 +510,8 @@
         "pct": -61.0,
         "role": "loss",
         "labelSide": "left",
-        "labelDy": -12.0
+        "labelDy": -12.0,
+        "country": "Saudi Arabia"
       }
     ]
   }

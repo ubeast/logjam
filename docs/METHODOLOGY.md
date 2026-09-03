@@ -299,6 +299,14 @@ its last ~2 weeks upward). The briefs need history back to 2023 —
 `LOGJAM_INITIAL_BACKFILL_DAYS=1400 uv run logjam refresh --full`. Re-run a
 generator after any `logjam refresh` to regenerate its figures.
 
+**Diversion map.** The Hormuz brief's §6 draws a `MapChart`: a real Natural
+Earth basemap with one bubble per affected port — green if container calls rose,
+red if they fell, area proportional to the calls/day change, and the port's
+country in the tooltip. It fits Hormuz because the diverted volume lands at
+identifiable substitute ports (Indian west coast, Salalah, Egyptian Med); the
+Suez and Horn briefs describe a route change (around the Cape) more than a
+port-to-port shift, so they carry charts instead of a map for now (roadmap).
+
 ---
 
 ## 8. Known limitations
