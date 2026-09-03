@@ -5,7 +5,7 @@ from __future__ import annotations
 import duckdb
 import pandas as pd
 
-from bottleneck_logistics.ingest.portwatch import TIDY_COLUMNS
+from logjam.ingest.portwatch import TIDY_COLUMNS
 
 _REQUIRED = set(TIDY_COLUMNS)
 

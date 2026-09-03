@@ -7,7 +7,7 @@ from pathlib import Path
 
 import duckdb
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 # Bump when the schema changes in a non-additive way; ``init_schema`` is
 # additive-only today, so this is informational.

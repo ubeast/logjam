@@ -1,9 +1,9 @@
 """Minimal Streamlit view over the signal tables.
 
-Run: ``uv run streamlit run src/bottleneck_logistics/dashboard/app.py``
+Run: ``uv run streamlit run src/logjam/dashboard/app.py``
 
 This is intentionally thin - it reads the same DuckDB tables the CLI does. The
-real analytical work lives in ``bottleneck_logistics.analytics``; keep it that
+real analytical work lives in ``logjam.analytics``; keep it that
 way so a future FastAPI layer can reuse it without touching this file.
 """
 
@@ -14,8 +14,8 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 
-from bottleneck_logistics.config import settings
-from bottleneck_logistics.store.db import connect
+from logjam.config import settings
+from logjam.store.db import connect
 
 st.set_page_config(page_title="Logistics Bottlenecks", layout="wide")
 st.title("Logistics bottleneck & opportunity monitor")
@@ -52,4 +52,4 @@ with col2:
     st.dataframe(load("opportunity", cutoff), use_container_width=True, hide_index=True)
 
 st.sidebar.write(f"DB: `{settings.db_path}`")
-st.sidebar.write("Refresh data with `uv run bottleneck refresh`.")
+st.sidebar.write("Refresh data with `uv run logjam refresh`.")

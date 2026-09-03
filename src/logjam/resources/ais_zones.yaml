@@ -1,0 +1,59 @@
+# Geofence configuration for the AISStream adapter (see ingest/ais_zones.py).
+#
+# Two layers, kept separate on purpose:
+#
+#   regions  - a handful of WIDE bounding boxes. These are what the WebSocket
+#              subscription asks AISStream to send. Keep the count small and the
+#              boxes generous; a tighter net just means a thinner sample.
+#
+#   ports    - PortWatch ports to build an anchorage catchment circle around.
+#              Each name is a case-insensitive substring match resolved against
+#              the PortWatch port database (resources/geo/portwatch_places.json).
+#              Only ports that fall inside a `region` will actually receive data.
+#
+# Chokepoint zones are generated automatically for every PortWatch chokepoint
+# (a square `chokepoint_half_deg` degrees to a side, centred on the chokepoint),
+# so they are not listed here.
+#
+# v1 scope is the geography of the current disruption briefs - the Persian Gulf,
+# the Red Sea, and the north-west Indian Ocean. Widen `regions` to cover more.
+
+chokepoint_half_deg: 0.35   # ~ +/- 35 km box around each chokepoint centre
+port_radius_km: 25.0        # anchorage catchment radius around a port centre
+
+# bbox: [[min_lat, min_lon], [max_lat, max_lon]]
+regions:
+  - name: Persian Gulf & Strait of Hormuz
+    bbox: [[22.5, 47.0], [30.5, 58.5]]
+  - name: Oman coast, Arabian Sea & NW India
+    bbox: [[6.0, 52.0], [26.5, 78.0]]   # west edge at 52 so Salalah (17N, 54E) is in
+  - name: Red Sea & Bab el-Mandeb
+    bbox: [[11.0, 32.0], [30.0, 44.0]]
+  - name: Suez & East Mediterranean
+    bbox: [[30.0, 26.0], [37.5, 36.0]]
+
+ports:
+  # Persian Gulf (inside the Strait of Hormuz)
+  - jebel ali
+  - khor fakkan
+  - fujairah
+  - dammam
+  - abu dhabi
+  # "Outside the strait" alternatives
+  - sohar
+  - salalah
+  # Red Sea
+  - jeddah
+  - king abdullah
+  - yanbu
+  # Egyptian Mediterranean transshipment
+  - damietta
+  - port said
+  - alexandria
+  # NW India / Pakistan west coast
+  - nhava sheva
+  - mundra
+  - hazira
+  - pipavav
+  - karachi
+  - bin qasim

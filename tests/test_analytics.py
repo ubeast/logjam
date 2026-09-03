@@ -6,10 +6,10 @@ import datetime as dt
 
 import pandas as pd
 
-from bottleneck_logistics.analytics.baseline import compute_baselines
-from bottleneck_logistics.analytics.detect import detect_bottlenecks
-from bottleneck_logistics.analytics.recovery import SEVERE, recovery_status
-from bottleneck_logistics.store.loaders import upsert_observations
+from logjam.analytics.baseline import compute_baselines
+from logjam.analytics.detect import detect_bottlenecks
+from logjam.analytics.recovery import SEVERE, recovery_status
+from logjam.store.loaders import upsert_observations
 
 
 def _series(entity_id: str, name: str, values: list[float], metric: str) -> pd.DataFrame:

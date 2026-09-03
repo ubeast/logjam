@@ -6,7 +6,7 @@ import duckdb
 import numpy as np
 import pandas as pd
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 # MAD -> sigma consistency constant for a normal distribution.
 _MAD_TO_SIGMA = 1.4826

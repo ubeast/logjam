@@ -18,7 +18,7 @@ from typing import Any
 import duckdb
 import yaml
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 
 @dataclass(frozen=True)

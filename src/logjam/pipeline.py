@@ -8,12 +8,13 @@ from dataclasses import dataclass
 
 import duckdb
 
-from bottleneck_logistics.analytics.baseline import compute_baselines
-from bottleneck_logistics.analytics.detect import detect_bottlenecks
-from bottleneck_logistics.analytics.opportunity import detect_opportunities
-from bottleneck_logistics.ingest.portwatch import default_since, fetch_portwatch, month_starts
-from bottleneck_logistics.store.db import connect, init_schema, latest_observation_date
-from bottleneck_logistics.store.loaders import upsert_observations
+from logjam.analytics.ais_reduce import reduce_pending as reduce_ais_pending
+from logjam.analytics.baseline import compute_baselines
+from logjam.analytics.detect import detect_bottlenecks, detect_congestion
+from logjam.analytics.opportunity import detect_opportunities
+from logjam.ingest.portwatch import default_since, fetch_portwatch, month_starts
+from logjam.store.db import connect, init_schema, latest_observation_date
+from logjam.store.loaders import upsert_observations
 
 # Above this span we ingest month-by-month so a first backfill (potentially
 # ~1M rows/year) never has to sit in memory all at once.
@@ -24,6 +25,7 @@ _CHUNK_THRESHOLD_DAYS = 75
 class RefreshResult:
     since: dt.date
     observations_written: int
+    ais_rows_written: int
     baseline_rows: int
     bottlenecks: int
     opportunities: int
@@ -69,16 +71,24 @@ def refresh(
 
         written = _ingest(con, since, progress=progress)
 
+        # Fold in any AIS captures that have not been reduced yet. No-op unless
+        # the AISStream sampler (`logjam ais-collect`) has been run.
+        progress("reducing AIS captures")
+        ais_rows = reduce_ais_pending(con)
+        if ais_rows:
+            progress(f"  {ais_rows:,} AIS observation rows")
+
         progress("computing baselines")
         baseline_rows = compute_baselines(con)
         progress("detecting bottlenecks")
-        bottlenecks = detect_bottlenecks(con)
+        bottlenecks = detect_bottlenecks(con) + detect_congestion(con)
         progress("detecting opportunities")
         opportunities = detect_opportunities(con)
 
         return RefreshResult(
             since=since,
             observations_written=written,
+            ais_rows_written=ais_rows,
             baseline_rows=baseline_rows,
             bottlenecks=bottlenecks,
             opportunities=opportunities,

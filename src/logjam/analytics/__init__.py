@@ -12,10 +12,10 @@ group-relative positive z on an alternative port == spare capacity is moving
 (opportunity).
 """
 
-from bottleneck_logistics.analytics.baseline import compute_baselines
-from bottleneck_logistics.analytics.detect import detect_bottlenecks
-from bottleneck_logistics.analytics.opportunity import detect_opportunities
-from bottleneck_logistics.analytics.recovery import recovery_status
+from logjam.analytics.baseline import compute_baselines
+from logjam.analytics.detect import detect_bottlenecks
+from logjam.analytics.opportunity import detect_opportunities
+from logjam.analytics.recovery import recovery_status
 
 __all__ = [
     "compute_baselines",

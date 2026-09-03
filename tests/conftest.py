@@ -3,7 +3,7 @@ from __future__ import annotations
 import duckdb
 import pytest
 
-from bottleneck_logistics.store.db import init_schema
+from logjam.store.db import init_schema
 
 
 @pytest.fixture

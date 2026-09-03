@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated": "2026-08-31T00:31:30+00:00",
+    "generated": "2026-09-01T03:07:05+00:00",
     "data_source": "IMF PortWatch (portwatch.imf.org)",
     "db_coverage": [
       "2023-01-01",
@@ -334,5 +334,177 @@
       "current": 0.9,
       "pct_change": -61.0
     }
-  ]
+  ],
+  "absorption": {
+    "metric": "portcalls_container",
+    "ceiling_proxy": "busiest calendar month since 2023-01-01",
+    "rows": [
+      {
+        "entity_id": "port746",
+        "name": "Salalah",
+        "iso3": "OMN",
+        "current": 3.1,
+        "peak": 3.23,
+        "peak_month": "2023-03",
+        "peak_month_label": "Mar 2023",
+        "p95": 3.13,
+        "pct_of_peak": 96.0,
+        "pct_of_p95": 99.0,
+        "band": "maxed"
+      },
+      {
+        "entity_id": "port543",
+        "name": "Karachi",
+        "iso3": "PAK",
+        "current": 2.6,
+        "peak": 3.0,
+        "peak_month": "2026-06",
+        "peak_month_label": "Jun 2026",
+        "p95": 2.65,
+        "pct_of_peak": 86.7,
+        "pct_of_p95": 98.1,
+        "band": "tight"
+      },
+      {
+        "entity_id": "port274",
+        "name": "Damietta",
+        "iso3": "EGY",
+        "current": 2.8,
+        "peak": 3.32,
+        "peak_month": "2023-08",
+        "peak_month_label": "Aug 2023",
+        "p95": 3.23,
+        "pct_of_peak": 84.3,
+        "pct_of_p95": 86.7,
+        "band": "tight"
+      },
+      {
+        "entity_id": "port776",
+        "name": "Nhava Sheva",
+        "iso3": "IND",
+        "current": 7.5,
+        "peak": 9.5,
+        "peak_month": "2025-04",
+        "peak_month_label": "Apr 2025",
+        "p95": 9.03,
+        "pct_of_peak": 78.9,
+        "pct_of_p95": 83.1,
+        "band": "tight"
+      },
+      {
+        "entity_id": "port777",
+        "name": "Mundra",
+        "iso3": "IND",
+        "current": 6.1,
+        "peak": 9.0,
+        "peak_month": "2025-01",
+        "peak_month_label": "Jan 2025",
+        "p95": 8.57,
+        "pct_of_peak": 67.8,
+        "pct_of_p95": 71.2,
+        "band": "headroom"
+      }
+    ]
+  },
+  "diversion_map": {
+    "bbox": [
+      31.0,
+      8.0,
+      78.0,
+      32.0
+    ],
+    "size_metric": "change in container port calls per day, Jul 2026 vs Sep 2025 - Feb 2026",
+    "points": [
+      {
+        "name": "Strait of Hormuz",
+        "lon": 56.8599,
+        "lat": 26.2968,
+        "delta": -14.0,
+        "pct": -93.0,
+        "role": "chokepoint",
+        "labelSide": "right",
+        "labelDy": -16.0
+      },
+      {
+        "name": "Jebel Ali",
+        "lon": 55.0778,
+        "lat": 24.9994,
+        "delta": -10.8,
+        "pct": -82.0,
+        "role": "loss",
+        "labelSide": "left",
+        "labelDy": 30.0
+      },
+      {
+        "name": "Nhava Sheva",
+        "lon": 72.9397,
+        "lat": 18.9173,
+        "delta": 3.9,
+        "pct": 108.0,
+        "role": "gain",
+        "labelSide": "right",
+        "labelDy": 0.0
+      },
+      {
+        "name": "Karachi",
+        "lon": 66.9832,
+        "lat": 24.8233,
+        "delta": 1.3,
+        "pct": 100.0,
+        "role": "gain",
+        "labelSide": "right",
+        "labelDy": -12.0
+      },
+      {
+        "name": "Salalah",
+        "lon": 54.0083,
+        "lat": 16.9423,
+        "delta": 0.9,
+        "pct": 41.0,
+        "role": "gain",
+        "labelSide": "left",
+        "labelDy": 0.0
+      },
+      {
+        "name": "Damietta",
+        "lon": 31.7595,
+        "lat": 31.4621,
+        "delta": 0.8,
+        "pct": 40.0,
+        "role": "gain",
+        "labelSide": "right",
+        "labelDy": 0.0
+      },
+      {
+        "name": "Mundra",
+        "lon": 69.622,
+        "lat": 22.763,
+        "delta": 1.1,
+        "pct": 22.0,
+        "role": "gain",
+        "labelSide": "right",
+        "labelDy": 0.0
+      },
+      {
+        "name": "Jeddah",
+        "lon": 39.1664,
+        "lat": 21.4608,
+        "delta": -1.4,
+        "pct": -31.0,
+        "role": "loss",
+        "labelSide": "left",
+        "labelDy": 0.0
+      },
+      {
+        "name": "Dammam",
+        "lon": 50.1944,
+        "lat": 26.4763,
+        "delta": -1.4,
+        "pct": -61.0,
+        "role": "loss",
+        "labelSide": "left",
+        "labelDy": -12.0
+      }
+    ]
+  }
 }

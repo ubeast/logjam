@@ -1,10 +1,10 @@
 # Methodology
 
-How `bottleneck-logistics` turns raw port-activity data into bottleneck,
+How `logjam` turns raw port-activity data into bottleneck,
 recovery, and opportunity signals. This document is the reference for anyone
 reviewing a finding the tool produced.
 
-Repository: <https://github.com/ubeast/bottleneck-logistics>
+Repository: <https://github.com/ubeast/logjam>
 
 ---
 
@@ -39,8 +39,39 @@ and analyses that need a stable "current" value exclude the trailing days
 | | Voyage duration (e.g. Suez vs Cape routing) |
 
 A chokepoint transit is an instantaneous line-crossing count, not a transit
-*time* — the Strait of Hormuz itself is a few hours' passage. Queue depth and
-dwell require vessel-level AIS, planned as a second ingest adapter (AISStream).
+*time* — the Strait of Hormuz itself is a few hours' passage.
+
+### 1a. Live AIS (AISStream.io)
+
+The queue signal PortWatch lacks comes from **[AISStream.io](https://aisstream.io)**,
+a free WebSocket feed of raw AIS position reports (needs a free API key). It is a
+*push* stream, not a batch endpoint, so the tool **samples** it: connect for a
+fixed number of minutes (`ais_sample_minutes`, default 30), capture every
+position report inside the subscription regions, disconnect, and append the raw
+rows to date-partitioned Parquet under `data/ais_raw/` (git-ignored). A separate
+step reduces one day of captures to per-zone daily metrics.
+
+**Geofences** (`resources/ais_zones.yaml`): a circular anchorage catchment
+(`port_radius_km`, default 25 km) around each watch-listed port, and a square box
+(`chokepoint_half_deg`, default ±0.35°) around every PortWatch chokepoint that
+falls inside a subscription region. Port and chokepoint centres come from
+PortWatch's own coordinate table (`resources/geo/portwatch_places.json`).
+
+**Derived metrics** (source `aisstream`, one value per zone per day):
+
+| Metric | Zone | Definition |
+|---|---|---|
+| `vessels_at_anchor` | port | distinct MMSIs whose median speed in the catchment is ≤ `ais_anchor_max_sog_kn` (1 kn) **or** which reported AIS nav-status 1/5 (anchored/moored) |
+| `vessels_moving` | port | distinct MMSIs under way (median SOG ≥ 3 kn) in the catchment |
+| `ais_transiting` | chokepoint | distinct MMSIs under way inside the chokepoint box during the sample |
+
+These are counts *observed during the sample window*, not full-day censuses.
+They are comparable day to day because the sampling cadence is fixed, and a
+day with fewer than `ais_min_messages_per_day` (200) raw messages is skipped as
+too thin. `vessels_at_anchor` is a standing quantity (a queue), so a snapshot
+measures it directly; `ais_transiting` is a rate proxy and a same-day
+cross-check on PortWatch's `n_total` (which lags a week and reads exact-zero on
+missing data).
 
 ---
 
@@ -50,13 +81,21 @@ dwell require vessel-level AIS, planned as a second ingest adapter (AISStream).
 ingest (PortWatch ArcGIS, paged)                  ingest/portwatch.py
   -> tidy long frame: entity | date | metric | value
   -> DuckDB `observation` table (idempotent upsert)  store/
+
+sample (AISStream WebSocket, time-boxed)          ingest/aisstream.py
+  -> raw Parquet captures under data/ais_raw/
+  -> reduce to per-zone daily metrics               analytics/ais_reduce.py
+  -> same `observation` table (source 'aisstream')
+
   -> per-series baselines                            analytics/baseline.py
-  -> bottleneck signals                              analytics/detect.py
+  -> bottleneck + anchor-queue signals               analytics/detect.py
   -> opportunity signals                             analytics/opportunity.py
   -> recovery status (on demand)                     analytics/recovery.py
 ```
 
-One `bottleneck refresh` runs the whole chain. It is idempotent — safe to re-run.
+`logjam refresh` runs the PortWatch pull, folds in any un-reduced AIS
+captures, and recomputes everything. `logjam ais-collect` runs the sampler.
+Both are idempotent — safe to re-run.
 
 ---
 
@@ -126,11 +165,18 @@ The signal row records `value`, the `expected` it was measured against, the
 z-score, `severity = |z|` for ranking, and a `detail.trigger` of `short`, `yoy`,
 or `both`. When both fire, the row reports whichever baseline is more extreme.
 
+**Anchor-queue spikes** are the mirror image: for `vessels_at_anchor` (AIS),
+*more* means flow is blocked, so `detect_congestion` flags the **positive**
+short-baseline tail (`robust_z ≥ +bottleneck_z_threshold`) as a bottleneck
+signal with `detail.trigger = "ais_congestion"`. AIS `vessels_moving` and
+`ais_transiting` are throughput-like and use the ordinary negative-tail rule
+above.
+
 ---
 
 ## 5. Recovery status
 
-`analytics/recovery.py`, surfaced as `bottleneck recovery -s <name>`. For each
+`analytics/recovery.py`, surfaced as `logjam recovery -s <name>`. For each
 `(entity, metric)` matching the name search it computes, over a trailing
 `recovery_window_days` (default 7) window ending `recovery_trailing_exclude_days`
 (default 2) before the last available date:
@@ -197,14 +243,19 @@ All three use an explicit **fixed pre-crisis window** rather than the rolling Yo
 baseline (§3b), because by 2026 a trailing baseline treats the disrupted level as
 normal. "Current" figures use the most recent settled month (PortWatch revises
 its last ~2 weeks upward). The briefs need history back to 2023 —
-`BNL_INITIAL_BACKFILL_DAYS=1400 uv run bottleneck refresh --full`. Re-run a
-generator after any `bottleneck refresh` to regenerate its figures.
+`LOGJAM_INITIAL_BACKFILL_DAYS=1400 uv run logjam refresh --full`. Re-run a
+generator after any `logjam refresh` to regenerate its figures.
 
 ---
 
 ## 8. Known limitations
 
-1. **Throughput, not queues.** No dwell time or anchorage-queue length in v1.
+1. **AIS is sampled, not continuous.** `vessels_at_anchor` / `ais_transiting`
+   count what was in the zone during a ~30-minute window, not a full day. A
+   queue (standing quantity) survives this well; a transit *rate* is only a
+   proxy. Terrestrial AIS coverage is strong near ports and thin far offshore,
+   and the Persian Gulf has known GPS interference. Berth-dwell time still needs
+   per-vessel state tracking (roadmap).
 2. **YoY ≠ pre-crisis** for disruptions over a year old (§3b).
 3. **Trailing-day under-reporting.** The newest ~2 weeks of PortWatch data read
    low; `bottlenecks` does not yet exclude them (only `recovery` does), so the

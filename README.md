@@ -1,4 +1,7 @@
-# bottleneck-logistics
+# logjam
+
+**Find the key log in global trade flow** — where cargo movement is blocked, and
+where it reroutes.
 
 Open-source logistics / supply-chain **bottleneck and opportunity identifier**.
 
@@ -7,7 +10,7 @@ It answers three questions from free, public data:
 1. **Where is flow blocked?** Ships not transiting a chokepoint, port throughput
    collapsing versus that port's own seasonal norm.
 2. **Is a known disruption still ongoing, or has it recovered?** Current
-   throughput vs the same calendar period a year ago (`bottleneck recovery`).
+   throughput vs the same calendar period a year ago (`logjam recovery`).
 3. **Where is the opportunity?** When one port in a substitution group is
    bottlenecked, which alternative in the same group is running at or above
    baseline and can absorb diverted volume?
@@ -26,17 +29,18 @@ driven by a CLI and a weekly GitHub Actions refresh.
 ### What PortWatch can and cannot tell us
 
 PortWatch is a **throughput** signal (vessels arriving / transiting), not a
-**queue** signal. So v1 detects *disruption* (transit or throughput collapse),
-not *dwell time* or *anchorage queue length*. Those need vessel-level AIS —
-planned as a second ingest adapter (AISStream, free WebSocket) that writes into
-the same `observation` table, so nothing downstream changes.
+**queue** signal. The **AISStream adapter** adds the queue signal: it samples the
+live AIS stream and counts vessels sitting at anchor off a port (`vessels_at_anchor`)
+and vessels moving through a chokepoint (`ais_transiting`, a same-day cross-check
+on PortWatch's weekly `n_total`). Both write into the same `observation` table, so
+baselines, detection, and the `recovery` command pick them up unchanged.
 
 ## Data sources
 
 | Source | In v1 | Cost | Role |
 |---|---|---|---|
 | [IMF PortWatch](https://portwatch.imf.org) | yes | free, keyless | Daily port calls + trade volume for ~2,065 ports; daily transit counts for 28 chokepoints. Weekly refresh (Tue). |
-| [AISStream.io](https://aisstream.io) | planned | free, free key | Live AIS → anchorage queue length, berth dwell time. |
+| [AISStream.io](https://aisstream.io) | yes | free, free key | Live AIS, sampled: anchorage-queue counts per port, transit counts per chokepoint. Needs `LOGJAM_AISSTREAM_API_KEY`. |
 | [Freightos Baltic Index](https://fbx.freightos.com) | planned | free | Lane-level container spot rates — a leading disruption signal. |
 | [GDELT](https://www.gdeltproject.org) | planned | free | Event/news context for *why* a bottleneck appeared. |
 
@@ -46,8 +50,8 @@ free public-use terms.
 ## Install
 
 ```bash
-git clone https://github.com/ubeast/bottleneck-logistics
-cd bottleneck-logistics
+git clone https://github.com/ubeast/logjam
+cd logjam
 uv sync --extra dev            # core + test deps
 uv sync --extra dev --extra dashboard   # also the Streamlit UI
 ```
@@ -55,18 +59,23 @@ uv sync --extra dev --extra dashboard   # also the Streamlit UI
 ## Use
 
 ```bash
-uv run bottleneck refresh --full        # first run: backfill + compute (~10 min, ~40M rows)
-uv run bottleneck refresh               # subsequent: incremental
-uv run bottleneck status
-uv run bottleneck bottlenecks --days 30
-uv run bottleneck opportunities --days 30
-uv run bottleneck recovery --search "hormuz"    # is a known disruption still ongoing?
-uv run bottleneck ports --search "jebel ali"    # find PortWatch entity ids
+uv run logjam refresh --full        # first run: backfill + compute (~10 min, ~40M rows)
+uv run logjam refresh               # subsequent: incremental
+uv run logjam status
+uv run logjam bottlenecks --days 30
+uv run logjam opportunities --days 30
+uv run logjam recovery --search "hormuz"    # is a known disruption still ongoing?
+uv run logjam ports --search "jebel ali"    # find PortWatch entity ids
 
-uv run streamlit run src/bottleneck_logistics/dashboard/app.py   # needs --extra dashboard
+# Live AIS (needs LOGJAM_AISSTREAM_API_KEY from aisstream.io):
+uv run logjam ais-collect --minutes 30      # sample the stream to data/ais_raw/
+uv run logjam ais-reduce                    # fold captures into the store
+uv run logjam refresh                       # then recompute baselines + signals
+
+uv run streamlit run src/logjam/dashboard/app.py   # needs --extra dashboard
 ```
 
-### `bottleneck recovery` — ongoing or recovered?
+### `logjam recovery` — ongoing or recovered?
 
 ```
 Recovery status: "hormuz"
@@ -87,28 +96,36 @@ case) it is accurate.
 ## Layout
 
 ```
-src/bottleneck_logistics/
-├── config.py                     all tunables (env-overridable, prefix BNL_)
+src/logjam/
+├── config.py                     all tunables (env-overridable, prefix LOGJAM_)
 ├── ingest/
 │   ├── arcgis.py                 generic paged ArcGIS FeatureServer client
-│   └── portwatch.py              PortWatch adapter -> tidy long frame
+│   ├── portwatch.py              PortWatch adapter -> tidy long frame
+│   ├── aisstream.py              AISStream sampler -> raw Parquet captures
+│   └── ais_zones.py              geofences (port circles + chokepoint boxes)
 ├── store/
 │   ├── db.py                     DuckDB connection + schema
 │   └── loaders.py                idempotent upsert into `observation`
 ├── analytics/
 │   ├── baseline.py               short trailing median/MAD z + year-over-year z
-│   ├── detect.py                 short OR yoy negative-tail z -> `signal` (bottleneck)
+│   ├── detect.py                 negative-tail z (throughput) + anchor-queue spike -> `signal`
+│   ├── ais_reduce.py             raw AIS Parquet -> daily per-zone metrics -> `observation`
 │   ├── opportunity.py            substitution-group divergence -> `signal` (opportunity)
 │   └── recovery.py               current vs same-period-last-year -> ongoing/recovered
-├── resources/substitution_groups.yaml   editable port clusters
-├── pipeline.py                   refresh() = the whole chain
-└── cli.py                        `bottleneck` command
+├── resources/
+│   ├── substitution_groups.yaml  editable port clusters
+│   ├── ais_zones.yaml            AIS subscription regions + port watchlist
+│   └── geo/                      PortWatch coordinates + the briefs' basemap
+├── pipeline.py                   refresh() = the whole chain (incl. AIS reduce)
+└── cli.py                        `logjam` command
 scripts/refresh.py                cron entry point
 scripts/reports/                  disruption-brief generators (_brief.py = shared renderer)
+scripts/reports/build_geo_assets.py  rebuild resources/geo/ (run once, needs network)
 scripts/build_pdfs.py             render every brief HTML + METHODOLOGY.md to PDF
 reports/                          published briefs (.json / .md / .html / .pdf)
 docs/METHODOLOGY.md               how baselines, detection, and recovery work
-.github/workflows/refresh.yml     weekly automated refresh
+.github/workflows/refresh.yml     weekly PortWatch refresh
+.github/workflows/ais-sample.yml  AIS stream sample + reduce (every few hours)
 ```
 
 ## Reports
@@ -124,7 +141,10 @@ and `scripts/build_pdfs.py` renders the `.pdf`.
   of Hormuz after the **2026 Iran conflict** (a separate shock from the Red Sea
   crisis): transits at ~7% of a fixed 2023 baseline since March 2026, Jebel Ali
   at ~18%, a cross-chokepoint chart showing the two crises are independent, and
-  the reroute to Indian west-coast / Salalah / Egyptian Mediterranean ports.
+  the reroute to Indian west-coast / Salalah / Egyptian Mediterranean ports — a
+  map (real Natural Earth basemap, PortWatch port coordinates) of where container
+  calls were lost and gained, and a capacity read showing the substitute ports
+  are mostly already near their own operating ceilings.
   `uv run python scripts/reports/hormuz_container_2026.py`
 - **`reports/suez_redsea_2026.html`** — the Suez Canal two and a half years into
   the Red Sea diversion: total transits back to ~55% of pre-crisis on tankers and
@@ -142,7 +162,7 @@ All three briefs compare against a **fixed pre-crisis 2023 quarter** (the Hormuz
 brief's reroute section uses the immediate pre-conflict months instead, since
 some candidate ports grew organically over 2023–2025). They need the store
 backfilled past the default 900-day window —
-`BNL_INITIAL_BACKFILL_DAYS=1400 uv run bottleneck refresh --full`.
+`LOGJAM_INITIAL_BACKFILL_DAYS=1400 uv run logjam refresh --full`.
 
 Method and limitations for everything the tool produces: **[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md)**.
 
@@ -166,9 +186,11 @@ set covers the major trade lanes; extend it for yours.
 - [x] Year-over-year baseline so sustained disruptions stay visible (`recovery`).
 - [ ] Trailing-days guard: exclude the most recent ~3 days from `bottlenecks` and
       treat a sudden exact-zero on a high-baseline series as missing data.
+- [x] AISStream adapter: sampled anchorage-queue + chokepoint-transit counts
+      (`ais-collect` / `ais-reduce`; geofences in `resources/ais_zones.yaml`).
+- [ ] AIS berth-dwell time (needs per-vessel anchorage→berth state tracking).
 - [ ] Multi-year / pre-crisis baseline option (fixed reference period) so
       `recovery` can answer "vs pre-disruption", not just "vs a year ago".
-- [ ] AISStream adapter: anchorage polygons, queue counts, berth dwell.
 - [ ] Freightos + GDELT adapters.
 - [ ] FastAPI read layer over `signal` / `baseline`.
 - [ ] Alerting (webhook / email) on new high-severity signals.

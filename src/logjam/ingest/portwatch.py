@@ -34,8 +34,8 @@ from typing import Any
 
 import pandas as pd
 
-from bottleneck_logistics.config import settings
-from bottleneck_logistics.ingest.arcgis import query_all
+from logjam.config import settings
+from logjam.ingest.arcgis import query_all
 
 # Columns we keep as measures. Everything else (year/month/day/ObjectId) is
 # either redundant with ``date`` or ArcGIS bookkeeping.
@@ -169,7 +169,7 @@ def fetch_portwatch(
             half-open range so month-by-month backfill chunks do not overlap.
             ``since=None`` pulls the server's full history - a few million rows
             per year, so the pipeline chunks large backfills (see
-            :func:`bottleneck_logistics.pipeline.refresh`).
+            :func:`logjam.pipeline.refresh`).
 
     Returns:
         DataFrame with :data:`TIDY_COLUMNS`. ``entity_type`` is ``"port"`` or

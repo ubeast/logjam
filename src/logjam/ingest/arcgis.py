@@ -13,7 +13,7 @@ from typing import Any
 
 import httpx
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 
 def query_all(

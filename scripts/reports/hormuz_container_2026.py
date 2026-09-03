@@ -16,7 +16,7 @@ Output:
     reports/hormuz_container_2026.html
 
 Needs a store backfilled to 2023 for a genuine pre-crisis baseline
-(``BNL_INITIAL_BACKFILL_DAYS=1400 uv run bottleneck refresh --full``).
+(``LOGJAM_INITIAL_BACKFILL_DAYS=1400 uv run logjam refresh --full``).
 """
 
 from __future__ import annotations
@@ -30,9 +30,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _brief import (  # noqa: E402
     Brief,
+    CapacityChart,
     DataTable,
     DivergingChart,
     LineChart,
+    MapChart,
     Section,
     Tile,
     connect,
@@ -42,6 +44,8 @@ from _brief import (  # noqa: E402
     window_avg,
     write_all,
 )
+from _geo import basemap as geo_basemap  # noqa: E402
+from _geo import coord as geo_coord  # noqa: E402
 
 SLUG = "hormuz_container_2026"
 HORMUZ = "chokepoint6"
@@ -61,6 +65,11 @@ PRECRISIS = (dt.date(2023, 9, 1), dt.date(2023, 12, 1))
 REROUTE_BASE = (dt.date(2025, 9, 1), dt.date(2026, 3, 1))
 CURRENT = (dt.date(2026, 7, 1), dt.date(2026, 8, 1))
 CURRENT_LABEL = "July 2026"
+
+# For the "can the substitute absorb it?" read (§8): a port's own ceiling is
+# proxied by its busiest calendar month on record since this date (the store's
+# fixed 2023 start). A floor estimate of true capacity, not a design figure.
+PEAK_SINCE = dt.date(2023, 1, 1)
 
 QUARTERS: list[tuple[int, int]] = [
     (y, q) for y in (2023, 2024, 2025, 2026) for q in (1, 2, 3, 4)
@@ -88,6 +97,37 @@ def quarterly(con: Any, entity_id: str, metric: str) -> list[float | None]:
     return [window_avg(con, entity_id, metric, *_q_bounds(y, q)) for y, q in QUARTERS]
 
 
+def short_name(name: str) -> str:
+    """A compact port label: prefer the parenthetical, else drop 'Port' noise."""
+    if "(" in name:
+        return name.split(" (")[-1].rstrip(")")
+    name = name.replace(" Port", "")
+    return name[len("Port of "):] if name.startswith("Port of ") else name
+
+
+def peak_month(con: Any, entity_id: str, metric: str) -> tuple[float, str, float] | None:
+    """Return (busiest monthly-avg value, its 'YYYY-MM', 95th-pct monthly-avg).
+
+    The port's own ceiling proxy for §8. ``None`` if the series has too little
+    history (<6 months) to make the peak meaningful.
+    """
+    rows = con.execute(
+        """
+        SELECT strftime(date_trunc('month', obs_date), '%Y-%m') AS mon, avg(value) AS v
+        FROM observation
+        WHERE entity_id = ? AND metric = ? AND obs_date >= ?
+        GROUP BY 1 HAVING avg(value) IS NOT NULL ORDER BY v
+        """,
+        [entity_id, metric, PEAK_SINCE],
+    ).fetchall()
+    if len(rows) < 6:
+        return None
+    values = [v for _, v in rows]
+    hi_val, hi_mon = max((v, m) for m, v in rows)
+    p95 = values[max(0, round(0.95 * len(values)) - 1)]
+    return round(hi_val, 2), hi_mon, round(p95, 2)
+
+
 def main() -> None:
     con = connect()
 
@@ -95,7 +135,7 @@ def main() -> None:
     if cov[0] > dt.date(2023, 10, 1):
         sys.exit(
             f"store starts {cov[0]} — need pre-crisis 2023 data. Backfill first "
-            "(BNL_INITIAL_BACKFILL_DAYS=1400 uv run bottleneck refresh --full)."
+            "(LOGJAM_INITIAL_BACKFILL_DAYS=1400 uv run logjam refresh --full)."
         )
 
     def ba(eid: str, metric: str) -> dict[str, float | None]:
@@ -145,6 +185,38 @@ def main() -> None:
                         "precrisis": a, "current": b, "pct_change": pct_change(b, a)})
     reroute.sort(key=lambda r: r["pct_change"], reverse=True)
 
+    # ---- Can the substitutes absorb it? --------------------------------
+    # A +100% swing means nothing without the port's ceiling. Proxy the ceiling
+    # by each port's busiest month on record and read July 2026 against it.
+    _MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+    def _abbr_month(ym: str) -> str:
+        y, m = ym.split("-")
+        return f"{_MON[int(m) - 1]} {y}"
+
+    absorption: list[dict[str, Any]] = []
+    for r in reroute:
+        if r["pct_change"] <= 5 or r["precrisis"] < 1.0:
+            continue  # only ports that meaningfully gained, off a real base
+        pk = peak_month(con, r["entity_id"], "portcalls_container")
+        if pk is None:
+            continue
+        peak_val, peak_ym, p95 = pk
+        cur = r["current"]
+        pct_of_peak = round(100 * cur / peak_val, 1)
+        pct_of_p95 = round(100 * cur / p95, 1)
+        band = (
+            "maxed" if pct_of_peak >= 95 else "tight" if pct_of_peak >= 75 else "headroom"
+        )
+        absorption.append({
+            "entity_id": r["entity_id"], "name": short_name(r["name"]), "iso3": r["iso3"],
+            "current": cur, "peak": peak_val, "peak_month": peak_ym,
+            "peak_month_label": _abbr_month(peak_ym), "p95": p95,
+            "pct_of_peak": pct_of_peak, "pct_of_p95": pct_of_p95, "band": band,
+        })
+    absorption.sort(key=lambda a: a["pct_of_peak"], reverse=True)
+
     payload = {
         "meta": {
             "generated": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
@@ -159,6 +231,11 @@ def main() -> None:
         "chokepoint_container_comparison": compare,
         "jebel_ali": jebel_ali,
         "reroute_candidates": reroute,
+        "absorption": {
+            "metric": "portcalls_container",
+            "ceiling_proxy": f"busiest calendar month since {PEAK_SINCE.isoformat()}",
+            "rows": absorption,
+        },
     }
 
     h_tot = hormuz["n_total"]
@@ -168,14 +245,87 @@ def main() -> None:
     ja_calls = jebel_ali["portcalls_container"]
     ja_imp = jebel_ali["import_container"]
     ja_exp = jebel_ali["export_container"]
-    def _short(name: str) -> str:
-        return name.split(" (")[-1].rstrip(")") if "(" in name else name.replace(" Port", "")
+    _short = short_name
 
     # Winners need a meaningful absolute base, or a tiny port dominates on percent.
     winners = [r for r in reroute if r["pct_change"] >= 25 and r["precrisis"] >= 1.0][:6]
     winners_txt = ", ".join(f"{_short(r['name'])} {r['pct_change']:+.0f}%" for r in winners)
     losers = [r for r in reroute if r["pct_change"] <= -20 and r["precrisis"] >= 1.0]
     losers_txt = ", ".join(f"{_short(r['name'])} {r['pct_change']:+.0f}%" for r in losers)
+
+    # Absorption prose helpers (§8).
+    _by_name = {a["name"]: a for a in absorption}
+    _maxed = [a for a in absorption if a["band"] == "maxed"]
+    _headroom = [a for a in absorption if a["band"] == "headroom"]
+    _maxed_txt = ", ".join(f"{a['name']} ({a['pct_of_peak']:.0f}%)" for a in _maxed)
+    _headroom_txt = ", ".join(f"{a['name']} ({a['pct_of_peak']:.0f}%)" for a in _headroom)
+
+    def _abs_pct(name: str) -> str:
+        a = _by_name.get(name)
+        return f"{a['pct_of_peak']:.0f}%" if a else "—"
+
+    # ---- Geographic view of the diversion --------------------------------
+    # A bubble per place on a real basemap: the Gulf hub and the strait as
+    # losses, the ports that picked up the diverted calls as gains. Bubble
+    # size = absolute change in daily container port calls (Jul 2026 vs the
+    # Sep 2025 - Feb 2026 pre-conflict window, matching sec 7); the strait
+    # itself is a fixed marker because its metric is transits, not port calls.
+    basemap = geo_basemap()
+    _bb_lo_lon, _bb_lo_lat, _bb_hi_lon, _bb_hi_lat = basemap["bbox"]
+
+    # Where a label sits relative to its bubble, to keep the crowded Gulf legible.
+    # (side, vertical nudge in px).
+    _LABEL_SIDE = {
+        "Jebel Ali": ("left", 30.0), "Strait of Hormuz": ("right", -16.0),
+        "Nhava Sheva": ("right", 0.0), "Mundra": ("right", 0.0),
+        "Karachi": ("right", -12.0), "Salalah": ("left", 0.0),
+        "Jeddah": ("left", 0.0), "Dammam": ("left", -12.0),
+        "Damietta": ("right", 0.0),
+    }
+
+    map_points: list[dict[str, Any]] = []
+
+    def _map_point(eid: str, name: str, a: float | None, b: float | None,
+                   *, role: str | None = None, pct_override: float | None = None) -> None:
+        loc = geo_coord(eid)
+        if loc is None:
+            return
+        lon, lat = loc
+        if not (_bb_lo_lon <= lon <= _bb_hi_lon and _bb_lo_lat <= lat <= _bb_hi_lat):
+            return
+        delta = round((b - a), 1) if (a is not None and b is not None) else 0.0
+        pc = pct_override if pct_override is not None else pct_change(b, a)
+        short = _short(name)
+        side, dy = _LABEL_SIDE.get(short, ("right", 0.0))
+        map_points.append({
+            "name": short, "lon": round(lon, 4), "lat": round(lat, 4),
+            "delta": delta, "pct": round(pc, 0) if pc is not None else 0.0,
+            "role": role or ("gain" if delta >= 0 else "loss"),
+            "labelSide": side, "labelDy": dy,
+        })
+
+    _map_point(HORMUZ, "Strait of Hormuz", h_con["precrisis"], h_con["current"],
+               role="chokepoint", pct_override=h_con["pct_change"])
+    _map_point(ja_id, ja_name, ja_calls["precrisis"], ja_calls["current"], role="loss")
+    for r in reroute:
+        # Skip ports whose absolute swing is below ~0.6 calls/day: a dot that
+        # small just adds clutter and near-collides with its neighbours.
+        if abs(r["current"] - r["precrisis"]) < 0.6:
+            continue
+        _map_point(r["entity_id"], r["name"], r["precrisis"], r["current"])
+
+    _sized = [abs(p["delta"]) for p in map_points if p["role"] != "chokepoint"]
+    map_size_max = max(_sized) if _sized else 1.0
+    payload["diversion_map"] = {
+        "bbox": basemap["bbox"],
+        "size_metric": "change in container port calls per day, Jul 2026 vs Sep 2025 - Feb 2026",
+        "points": map_points,
+    }
+
+    _map_labels = [
+        "Jebel Ali", "Strait of Hormuz", "Nhava Sheva", "Mundra", "Karachi",
+        "Salalah", "Jeddah", "Dammam", "Damietta",
+    ]
 
     sections = [
         Section(
@@ -297,7 +447,40 @@ def main() -> None:
             },
         ),
         Section(
-            "6", "Where the containers went",
+            "6", "The diversion, mapped",
+            lede_md="One picture of the whole reroute: the Gulf hub and the "
+            "strait empty out, and the calls reappear on India's west coast, in "
+            "Oman, and on Egypt's Mediterranean coast.",
+            body_md=(
+                "Every circle is a port; its area is the change in daily container "
+                "port calls between the six months before the conflict and July "
+                f"2026. **Blue** ports gained calls, **red** ports lost them, and the "
+                f"**diamond** marks the Strait of Hormuz itself, where transits — not "
+                f"port calls — are down about {abs(h_con['pct_change']):.0f}%.\n\n"
+                "The pattern is directional, not a scatter. The losses sit *inside* "
+                "the Gulf — Jebel Ali above all. The gains are on the seaward side of "
+                "the strait and along the Indian subcontinent's west coast, the "
+                "shortest redirect for cargo that can no longer reach the Gulf. "
+                "Saudi Arabia's Red Sea ports are red too — Bab el-Mandeb is a "
+                "second drag on that coast — and the big transshipment hubs barely "
+                "move."
+            ),
+            figure={
+                "title": "Where container port calls were lost and gained",
+                "sub": "Change in calls per day, July 2026 vs the Sep 2025 – Feb 2026 pre-conflict window",
+                "chart_id": "chart-map",
+                "caption": "Basemap: Natural Earth 10m (public domain). Ports: IMF "
+                "PortWatch `Daily_Ports_Data` (`portcalls_container`); coordinates from "
+                "PortWatch's port database. Strait marker: `Daily_Chokepoints_Data`, "
+                "chokepoint 6, `n_container`. Circle area is proportional to the "
+                "absolute change in daily calls.",
+                "legend": [("Container calls gained", "var(--pos)"),
+                           ("Container calls lost", "var(--neg)"),
+                           ("Strait of Hormuz (transits)", "var(--accent-ink)")],
+            },
+        ),
+        Section(
+            "7", "Where the containers went",
             body_md=(
                 "Cargo that would have moved through the Gulf has rerouted, and not "
                 "to the usual transshipment hubs. Measured against the six months "
@@ -309,7 +492,9 @@ def main() -> None:
                 "mega-transshipment hubs that would normally absorb a shock "
                 "(Colombo, Piraeus) are flat. This section uses the immediate "
                 "pre-conflict window, not the 2023 baseline, because several of "
-                "these ports grew on their own over 2023–2025."
+                "these ports grew on their own over 2023–2025.\n\n"
+                "A large percentage gain does not mean a port has room for it — §8 "
+                "measures each of these ports against its own capacity ceiling."
             ),
             figure={
                 "title": "Change in container port calls — July 2026 vs pre-conflict",
@@ -322,16 +507,68 @@ def main() -> None:
             },
         ),
         Section(
-            "7", "Assessment",
+            "8", "Can the substitutes absorb it?",
+            lede_md="A port running +100% is not a port with room to spare. Against "
+            "each port's own busiest month on record, most of the ports taking Gulf "
+            "volume are already near their ceilings.",
+            body_md=(
+                "The reroute percentages in §7 are measured against each port's "
+                "*recent* baseline, not its capacity. To read the strain, set July "
+                "2026 throughput beside the busiest calendar month that port has "
+                f"posted since {PEAK_SINCE.year}.\n\n"
+                f"On that test the diverted calls are landing on ports that are "
+                f"mostly **already running hot**. {_maxed_txt or 'None of them'} "
+                f"{'are at the level they have' if len(_maxed) != 1 else 'is at the level it has'} "
+                f"ever sustained. **Nhava Sheva**, the single biggest gainer, sits at "
+                f"**{_abs_pct('Nhava Sheva')}** of its record month despite the "
+                f"+108%, and **Karachi** at **{_abs_pct('Karachi')}** of its record "
+                f"is effectively at the busiest level it has ever held. The one port "
+                f"with real slack is **{_headroom_txt or 'none in this set'}**.\n\n"
+                "That is the reroute's ceiling. The alternatives can hold the "
+                "volume diverted so far, but the network has little headroom for a "
+                "further step-down at Hormuz — and none of these routes replaces "
+                "the lost Gulf capacity one-for-one."
+            ),
+            figure={
+                "title": "How full are the substitute ports?",
+                "sub": "July 2026 container port calls as a share of each port's busiest month since 2023",
+                "chart_id": "chart-absorption",
+                "caption": "Source: IMF PortWatch, `Daily_Ports_Data`, `portcalls_container`. "
+                "Bar = July 2026 daily average ÷ the port's highest monthly average since "
+                "Jan 2023 (a floor estimate of its ceiling). Caret marks the 95th-"
+                "percentile month. Bands: green below 75%, amber 75–95%, red 95%+. "
+                "Port calls are not TEU, and a port that never reached its true limit "
+                "will look fuller than it is.",
+                "legend": [("Headroom (<75%)", "var(--good)"),
+                           ("Tightening (75–95%)", "var(--warning)"),
+                           ("At ceiling (95%+)", "var(--neg)")],
+            },
+            table=DataTable(
+                caption="Substitute-port loading — July 2026 vs each port's own record month",
+                columns=["Port", "Jul 2026 /day", "Busiest month", "Peak /day",
+                         "% of peak", "% of p95", "Read"],
+                rows=[
+                    [a["name"], f"{a['current']:.1f}", a["peak_month_label"],
+                     f"{a['peak']:.1f}", f"{a['pct_of_peak']:.0f}%",
+                     f"{a['pct_of_p95']:.0f}%",
+                     {"maxed": "At ceiling", "tight": "Tightening",
+                      "headroom": "Headroom"}[a["band"]]]
+                    for a in absorption
+                ],
+            ),
+        ),
+        Section(
+            "9", "Assessment",
             body_md=(
                 "For container shipping the Strait of Hormuz has been functionally "
                 "closed since March 2026, with no recovery trend through late August. "
                 "The regional network has partly re-formed around it — Indian "
                 "west-coast direct calls, Salalah, and Egyptian Mediterranean "
                 "transshipment are the load-bearing alternatives — at a fraction of "
-                "the lost volume and longer transit distances. This is a distinct "
-                "shock from the still-unresolved Red Sea diversion; the two now run "
-                "in parallel.\n\n"
+                "the lost volume, over longer distances, and (§8) into ports that "
+                "are mostly already near their own operating ceilings. This is a "
+                "distinct shock from the still-unresolved Red Sea diversion; the two "
+                "now run in parallel.\n\n"
                 "PortWatch measures vessel movements, not their causes: the March "
                 "2026 break coincides with the reported Strait of Hormuz crisis, but "
                 "the data attests to the shipping outcome. Every figure is measured "
@@ -391,6 +628,24 @@ def main() -> None:
                    "pct": int(r["pct_change"]),
                    "a": r["precrisis"], "b": r["current"]} for r in reroute],
             max_abs=max(80, min(160, max(abs(r["pct_change"]) for r in reroute) + 15)),
+        ),
+        MapChart(
+            "chart-map",
+            bbox=basemap["bbox"],
+            land=basemap["land"],
+            borders=basemap["borders"],
+            points=map_points,
+            size_max=map_size_max,
+            size_unit="calls/day",
+            size_legend=[1, 3, round(map_size_max)] if map_size_max >= 4 else [1, 2, 3],
+            labels=_map_labels,
+        ),
+        CapacityChart(
+            "chart-absorption",
+            rows=[{"name": a["name"], "pct": a["pct_of_peak"], "mark": a["pct_of_p95"],
+                   "band": a["band"],
+                   "note": f"{a['current']:.1f} vs {a['peak']:.1f} peak/day"}
+                  for a in absorption],
         ),
     ]
 
@@ -453,7 +708,7 @@ def main() -> None:
              "Jebel Ali use a fixed **September–November 2023** window, matching the "
              "sibling Red Sea briefs — Hormuz throughput was within ~10% of that "
              "level every quarter through 2025, so the immediate pre-conflict period "
-             "gives the same result. The **reroute analysis (§6) uses "
+             "gives the same result. The **map (§6) and reroute analysis (§7) use "
              "September 2025 – February 2026** instead, because several candidate "
              "ports grew on their own over 2023–2025 and a 2023 comparison would "
              "conflate that growth with the diversion. Percent-of-normal = current "
@@ -471,7 +726,28 @@ def main() -> None:
              "hubs) compared on `portcalls_container`, July 2026 vs Sep 2025 – "
              "Feb 2026. Ranked by percent change; absolute rates shown alongside "
              "because small ports swing large percentages off a low base."),
-            ("Reproduce", "Clone github.com/ubeast/bottleneck-logistics, backfill the "
+            ("Absorption / capacity (§8)", "PortWatch publishes no berth or design "
+             "capacity for ports, so each port's ceiling is proxied by its **busiest "
+             "calendar month on record since January 2023** (highest monthly average "
+             "of `portcalls_container`). §8 reads July 2026 against that peak and "
+             "against the port's 95th-percentile month (a “sustained” "
+             "level). Bands: <75% headroom, 75–95% tightening, ≥95% at ceiling. "
+             "This is a **floor estimate** of capacity — a port that never reached "
+             "its true limit in this window looks fuller than it is — and it counts "
+             "vessel calls, not TEU. For a port whose busiest month falls *after* "
+             "March 2026 (e.g. Karachi), that peak already reflects diverted "
+             "traffic, so the headroom read is conservative: the port has shown it "
+             "can handle at least that much."),
+            ("Map", "Basemap is Natural Earth 10m land and national boundary lines "
+             "(public domain), clipped to the region, simplified, and projected "
+             "with Web Mercator in the browser — no map tiles, no network at render "
+             "time. Port coordinates come from PortWatch's own port database. Each "
+             "circle's **area** is proportional to the absolute change in daily "
+             "container port calls (same window as §7); the Strait of Hormuz is a "
+             "fixed diamond because its metric is transits, not port calls. Build "
+             "the geographic assets with `uv run --with shapely --with httpx python "
+             "scripts/reports/build_geo_assets.py`."),
+            ("Reproduce", "Clone github.com/ubeast/logjam, backfill the "
              "database to 2023, then `uv run python "
              "scripts/reports/hormuz_container_2026.py`. Full method in "
              "`docs/METHODOLOGY.md`."),
@@ -489,6 +765,10 @@ def main() -> None:
             "every figure is “versus 2023.”",
             "The reroute set only includes ports named in the tool's substitution "
             "list; an unlisted beneficiary would be missed.",
+            "The §8 capacity read uses each port's busiest month since 2023 as a "
+            "ceiling proxy — a floor estimate of true capacity — and counts vessel "
+            "calls, not container volume; a port taking larger ships absorbs more "
+            "than its call count implies.",
         ],
     )
 

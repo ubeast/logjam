@@ -12,7 +12,7 @@ Each brief script:
 
 The narrative prose is written by a person (it interprets the data), but every
 number in it comes from ``payload`` via f-strings, so re-running the script
-after a ``bottleneck refresh`` regenerates a consistent brief.
+after a ``logjam refresh`` regenerates a consistent brief.
 
 Design note: the HTML CSS and the SVG chart library are lifted verbatim from
 the first brief (``hormuz_container_2026``) so all briefs share one visual
@@ -31,11 +31,11 @@ from typing import Any
 
 import duckdb
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 REPORTS_DIR = Path(__file__).resolve().parents[2] / "reports"
 DATA_DIR = REPORTS_DIR / "data"
-REPO_URL = "https://github.com/ubeast/bottleneck-logistics"
+REPO_URL = "https://github.com/ubeast/logjam"
 
 
 # --------------------------------------------------------------------------- #
@@ -149,6 +149,7 @@ class Section:
     lede_md: str | None = None
     figure: dict[str, Any] | None = None   # {title, sub, chart_id, caption, legend?}
     callout: tuple[str, str] | None = None  # (label, text)
+    table: DataTable | None = None          # optional table rendered after the prose/figure
 
 
 @dataclass
@@ -173,6 +174,51 @@ class DivergingChart:
     kind: str = "diverging"
     rows: list[dict[str, Any]] = field(default_factory=list)  # {name,country,pct,a,b}
     max_abs: float = 135
+
+
+@dataclass
+class MapChart:
+    """A geographic bubble map: real basemap first, then a circle per place.
+
+    ``land`` / ``borders`` are GeoJSON *geometry* objects (Polygon/MultiPolygon,
+    LineString/MultiLineString) from ``assets/geo/basemap_mideast.json`` via
+    :mod:`_geo`. ``bbox`` is ``[minlon, minlat, maxlon, maxlat]`` and drives a
+    Web-Mercator projection in the browser. Each point:
+        {name, lon, lat, delta, pct, role}
+    ``role`` is ``"gain"`` | ``"loss"`` | ``"chokepoint"``; ``delta`` is the
+    signed absolute change and sizes the bubble, ``pct`` the percent change.
+    """
+
+    chart_id: str
+    kind: str = "map"
+    bbox: list[float] = field(default_factory=list)
+    land: dict[str, Any] = field(default_factory=dict)
+    borders: dict[str, Any] = field(default_factory=dict)
+    points: list[dict[str, Any]] = field(default_factory=list)
+    size_max: float = 0            # |delta| that maps to the largest bubble
+    size_unit: str = ""            # e.g. "container calls/day"
+    size_legend: list[float] = field(default_factory=list)  # |delta| values for the size key
+    labels: list[str] = field(default_factory=list)         # point names to always label
+
+
+@dataclass
+class CapacityChart:
+    """Horizontal meter bars: each row's current level as a % of its own ceiling.
+
+    Answers "can this port absorb more?" rather than "how much did it change?".
+    Each row:
+        {name, pct: <current / historical-peak, %>, mark: <current / p95, %>,
+         band: "headroom" | "tight" | "maxed", note: "<7.5 vs 9.5 peak/day>"}
+    A dashed reference line sits at 100 (the port's own busiest month); ``mark``
+    draws a small tick for the 95th-percentile "sustained" level.
+    """
+
+    chart_id: str
+    kind: str = "capacity"
+    rows: list[dict[str, Any]] = field(default_factory=list)
+    bar_max: float = 115.0
+    ref: float = 100.0
+    ref_label: str = "own peak"
 
 
 @dataclass
@@ -233,6 +279,15 @@ def _strip_md(text: str) -> str:
 # --------------------------------------------------------------------------- #
 #  Markdown renderer
 # --------------------------------------------------------------------------- #
+def _markdown_table(t: DataTable) -> str:
+    """A GitHub-flavoured Markdown table; first column left-, the rest right-aligned."""
+    align = "|" + "|".join(["---"] + ["--:"] * (len(t.columns) - 1)) + "|"
+    lines = [f"**{t.caption}**", "", "| " + " | ".join(t.columns) + " |", align]
+    for row in t.rows:
+        lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines)
+
+
 def render_markdown(b: Brief, key_figures: list[tuple[str, str, str, str]]) -> str:
     """key_figures: list of (metric, now, baseline, pct_of_normal) rows."""
     L: list[str] = []
@@ -240,7 +295,7 @@ def render_markdown(b: Brief, key_figures: list[tuple[str, str, str, str]]) -> s
     L.append(f"**{b.kicker} — {_strip_md(b.headline)}**\n")
     L.append("| | |\n|---|---|")
     L.append("| **By** | Michael Schertz |")
-    L.append(f"| **Tooling** | [`bottleneck-logistics`]({REPO_URL}) (open-source) |")
+    L.append(f"| **Tooling** | [`logjam`]({REPO_URL}) (open-source) |")
     L.append(f"| **Generated** | {b.generated} |")
     L.append(f"| **Data as of** | {b.data_as_of} |")
     L.append("| **Source** | IMF PortWatch (`portwatch.imf.org`) |")
@@ -264,11 +319,13 @@ def render_markdown(b: Brief, key_figures: list[tuple[str, str, str, str]]) -> s
         L.append(s.body_md.strip() + "\n")
         if s.callout:
             L.append(f"**{s.callout[0]}.** {s.callout[1]}\n")
+        if s.table:
+            L.append(_markdown_table(s.table) + "\n")
     L.append("---\n")
     L.append("## Method & provenance\n")
     L.append(
         "Every figure in this brief is reproducible from a local database built "
-        "by the open-source `bottleneck-logistics` tool and a single generator "
+        "by the open-source `logjam` tool and a single generator "
         "script. Nothing is hand-transcribed.\n"
     )
     for term, defn in b.method_dl:
@@ -279,7 +336,7 @@ def render_markdown(b: Brief, key_figures: list[tuple[str, str, str, str]]) -> s
     L.append("")
     L.append("---\n")
     L.append(
-        f"*Michael Schertz · built with [`bottleneck-logistics`]({REPO_URL}), an "
+        f"*Michael Schertz · built with [`logjam`]({REPO_URL}), an "
         "open-source logistics bottleneck & opportunity identifier. Data © IMF "
         "PortWatch, used under its free public-use terms. This document reports "
         "analysis of public shipping data; it is not affiliated with or endorsed "
@@ -291,6 +348,27 @@ def render_markdown(b: Brief, key_figures: list[tuple[str, str, str, str]]) -> s
 # --------------------------------------------------------------------------- #
 #  HTML renderer
 # --------------------------------------------------------------------------- #
+def _table_html(table: DataTable) -> str:
+    thead = "".join(f"<th>{html.escape(c)}</th>" for c in table.columns)
+    tbody_rows = []
+    for i, row in enumerate(table.rows):
+        cls = ' class="break"' if table.break_row == i else ""
+        cells = "".join(
+            f'<td class="{"cell-crit" if j in table.crit_cols and table.break_row is not None and i >= table.break_row else ""}">{html.escape(v)}</td>'
+            for j, v in enumerate(row)
+        )
+        tbody_rows.append(f"<tr{cls}>{cells}</tr>")
+    return f'''  <div class="tbl-wrap">
+    <table>
+      <caption>{html.escape(table.caption)}</caption>
+      <thead><tr>{thead}</tr></thead>
+      <tbody>
+        {"".join(tbody_rows)}
+      </tbody>
+    </table>
+  </div>'''
+
+
 def _chart_to_json(c: Any) -> dict[str, Any]:
     if isinstance(c, LineChart):
         return {
@@ -306,6 +384,28 @@ def _chart_to_json(c: Any) -> dict[str, Any]:
             "refLabel": c.ref_label,
             "provisionalLast": c.provisional_last,
             "series": c.series,
+        }
+    if isinstance(c, MapChart):
+        return {
+            "type": "map",
+            "mount": c.chart_id,
+            "bbox": c.bbox,
+            "land": c.land,
+            "borders": c.borders,
+            "points": c.points,
+            "sizeMax": c.size_max,
+            "sizeUnit": c.size_unit,
+            "sizeLegend": c.size_legend,
+            "labels": c.labels,
+        }
+    if isinstance(c, CapacityChart):
+        return {
+            "type": "capacity",
+            "mount": c.chart_id,
+            "rows": c.rows,
+            "barMax": c.bar_max,
+            "ref": c.ref,
+            "refLabel": c.ref_label,
         }
     return {
         "type": "diverging",
@@ -364,27 +464,12 @@ def render_html(b: Brief) -> str:
       <p>{_inline(s.callout[1])}</p>
     </div>'''
             )
+        if s.table:
+            parts.append(_table_html(s.table))
         parts.append("  </section>")
         sections_html.append("\n".join(parts))
 
-    thead = "".join(f"<th>{html.escape(c)}</th>" for c in table.columns)
-    tbody_rows = []
-    for i, row in enumerate(table.rows):
-        cls = ' class="break"' if table.break_row == i else ""
-        cells = "".join(
-            f'<td class="{"cell-crit" if j in table.crit_cols and table.break_row is not None and i >= table.break_row else ""}">{html.escape(v)}</td>'
-            for j, v in enumerate(row)
-        )
-        tbody_rows.append(f"<tr{cls}>{cells}</tr>")
-    table_html = f'''  <div class="tbl-wrap">
-    <table>
-      <caption>{html.escape(table.caption)}</caption>
-      <thead><tr>{thead}</tr></thead>
-      <tbody>
-        {"".join(tbody_rows)}
-      </tbody>
-    </table>
-  </div>'''
+    table_html = _table_html(table)
 
     method_dl = "\n".join(
         f"      <dt>{html.escape(term)}</dt>\n      <dd>{_inline(defn)}</dd>"
@@ -423,7 +508,7 @@ def render_html(b: Brief) -> str:
     <p class="dek">{_inline(b.dek)}</p>
     <div class="byline">
       <span><b>By</b> Michael Schertz</span>
-      <span><b>Tooling</b> <a href="{REPO_URL}">bottleneck-logistics</a> (open-source)</span>
+      <span><b>Tooling</b> <a href="{REPO_URL}">logjam</a> (open-source)</span>
       <span><b>Generated</b> {html.escape(b.generated)}</span>
       <span><b>Source</b> IMF PortWatch</span>
       <span><b>Method</b> see §&nbsp;Method &amp; provenance</span>
@@ -444,7 +529,7 @@ def render_html(b: Brief) -> str:
   <div class="wrap">
     <div class="sec-head"><span class="sec-num">§</span><h2>Method &amp; provenance</h2></div>
     <div class="prose">
-      <p>Every figure in this brief is reproducible from a local database built by the open-source <code>bottleneck-logistics</code> tool and a single generator script. Nothing is hand-transcribed.</p>
+      <p>Every figure in this brief is reproducible from a local database built by the open-source <code>logjam</code> tool and a single generator script. Nothing is hand-transcribed.</p>
     </div>
     <dl>
 {method_dl}
@@ -458,7 +543,7 @@ def render_html(b: Brief) -> str:
 
 <footer class="colophon">
   <div class="wrap">
-    Michael Schertz · built with <a href="{REPO_URL}">bottleneck-logistics</a>, an open-source logistics bottleneck &amp; opportunity identifier<br />
+    Michael Schertz · built with <a href="{REPO_URL}">logjam</a>, an open-source logistics bottleneck &amp; opportunity identifier<br />
     Data © IMF PortWatch, used under its free public-use terms · Brief generated {html.escape(b.generated)}<br />
     This document reports analysis of public shipping data. It is not affiliated with or endorsed by the IMF.
   </div>
@@ -512,6 +597,11 @@ PAGE_CSS = r"""
     --pos:          #2a78d6;
     --neg:          #d03b3b;
 
+    --map-water:    #eef2f3;
+    --map-land:     #e1e5df;
+    --map-coast:    #a6b1a3;
+    --map-border:   #c3ccc3;
+
     --good:     #0ca30c;
     --warning:  #fab219;
     --serious:  #ec835a;
@@ -548,6 +638,11 @@ PAGE_CSS = r"""
       --s3:           #46b892;
       --pos:          #3987e5;
       --neg:          #e66767;
+
+      --map-water:    #0f171a;
+      --map-land:     #222d30;
+      --map-coast:    #3d5155;
+      --map-border:   #33474a;
     }
   }
 
@@ -573,6 +668,11 @@ PAGE_CSS = r"""
     --s3:           #46b892;
     --pos:          #3987e5;
     --neg:          #e66767;
+
+    --map-water:    #0f171a;
+    --map-land:     #222d30;
+    --map-coast:    #3d5155;
+    --map-border:   #33474a;
   }
 
   * { box-sizing: border-box; }
@@ -743,6 +843,19 @@ PAGE_CSS = r"""
   .tick { font-size: 11px; fill: var(--ink-3); }
   .series-label { font-size: 12px; font-weight: 500; font-family: var(--font-body); }
 
+  .map-water { fill: var(--map-water); }
+  .map-land { fill: var(--map-land); stroke: var(--map-coast); stroke-width: 0.75; stroke-linejoin: round; }
+  .map-border { fill: none; stroke: var(--map-border); stroke-width: 0.75; stroke-dasharray: 2 2; }
+  .map-grat { stroke: var(--map-coast); stroke-width: 0.5; stroke-opacity: 0.28; fill: none; }
+  .map-grat-tick { font-size: 10px; fill: var(--ink-3); }
+  .map-bubble { fill-opacity: 0.72; stroke-width: 1.25; }
+  .map-choke { fill: var(--accent-ink); fill-opacity: 0.22; stroke: var(--accent-ink); stroke-width: 2; }
+  .map-label {
+    font-size: 11px; font-family: var(--font-body); font-weight: 500; fill: var(--ink);
+    paint-order: stroke; stroke: var(--chart-surface); stroke-width: 3px; stroke-linejoin: round;
+  }
+  .map-key-txt { font-size: 11px; fill: var(--ink-2); font-family: var(--font-body); }
+
   .legend {
     display: flex; flex-wrap: wrap; gap: 0.4rem 1.3rem;
     margin-top: 0.9rem; font-size: 0.8rem; color: var(--ink-2);
@@ -841,6 +954,7 @@ PAGE_CSS = r"""
       --ink: #15211f; --ink-2: #3f5054; --ink-3: #6b7a7d;
       --hairline: #cdd6d8; --rule: #aab6b8;
       --chart-surface: #ffffff;
+      --map-water: #ffffff; --map-land: #edf0eb; --map-coast: #b4bdb1; --map-border: #ccd3cc;
     }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     body { font-size: 10.5pt; line-height: 1.5; background: #fff; }
@@ -1058,10 +1172,204 @@ CHART_JS = r"""
     document.getElementById(mount).appendChild(svg);
   }
 
+  // --- capacity meter -------------------------------------------------
+  // One bar per port: current throughput as a % of that port's own busiest
+  // month on record. A dashed line at 100 is the port's own ceiling; a small
+  // caret marks its 95th-percentile ("sustained") level. Bar colour bands the
+  // headroom.
+  function capacityBars(mount, opts) {
+    var rows = opts.rows, barMax = opts.barMax || 115, ref = opts.ref || 100;
+    var rowH = 34, padTop = 12, padBottom = 30;
+    var W = 860, H = padTop + rows.length * rowH + padBottom;
+    var labelW = 150, valW = 150;
+    var plotL = labelW, plotW = W - labelW - valW;
+    function X(v) { return plotL + plotW * Math.min(v, barMax) / barMax; }
+    var BAND = { headroom: "var(--good)", tight: "var(--warning)", maxed: "var(--neg)" };
+
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+      "aria-label": "Each port's current container throughput as a share of its own historical peak." });
+
+    [0, 25, 50, 75, 100].forEach(function (v) {
+      svg.appendChild(el("line", { class: v === 0 ? "axis-line" : "grid-line", x1: X(v), y1: padTop, x2: X(v), y2: H - padBottom }));
+      var t = el("text", { class: "tick", x: X(v), y: H - padBottom + 18, "text-anchor": "middle" });
+      t.textContent = v + "%"; svg.appendChild(t);
+    });
+    // the port's-own-peak reference
+    svg.appendChild(el("line", { class: "ref-line", x1: X(ref), y1: padTop - 2, x2: X(ref), y2: H - padBottom }));
+    var rl = el("text", { class: "tick", x: X(ref), y: padTop - 5, "text-anchor": "middle" });
+    rl.setAttribute("fill", "var(--ink-3)"); rl.textContent = opts.refLabel || "own peak"; svg.appendChild(rl);
+
+    rows.forEach(function (r, i) {
+      var y = padTop + i * rowH, cy = y + rowH / 2;
+      var col = BAND[r.band] || "var(--s1)";
+      var x0 = X(0), x1 = X(r.pct);
+      svg.appendChild(el("rect", { x: x0, y: cy - 9, width: Math.max(x1 - x0, 2), height: 18, rx: 3, fill: col, "fill-opacity": "0.85" }));
+
+      // 95th-percentile caret
+      if (r.mark != null) {
+        var mx = X(r.mark);
+        svg.appendChild(el("path", { d: "M" + mx + " " + (cy - 11) + " L" + (mx - 4) + " " + (cy - 16) + " L" + (mx + 4) + " " + (cy - 16) + " Z",
+          fill: "var(--ink-2)" }));
+      }
+
+      var nm = el("text", { x: labelW - 12, y: cy + 4, "text-anchor": "end", class: "series-label" });
+      nm.setAttribute("fill", "var(--ink)"); nm.textContent = r.name; svg.appendChild(nm);
+
+      var inside = x1 > plotL + plotW - 44;
+      var pv = el("text", { x: inside ? x1 - 7 : x1 + 8, y: cy + 4,
+        "text-anchor": inside ? "end" : "start", class: "tick" });
+      pv.setAttribute("fill", inside ? "#ffffff" : col); pv.setAttribute("font-weight", "500");
+      pv.textContent = Math.round(r.pct) + "%"; svg.appendChild(pv);
+
+      if (r.note) {
+        var nt = el("text", { x: W - 6, y: cy + 4, "text-anchor": "end", class: "tick" });
+        nt.textContent = r.note; svg.appendChild(nt);
+      }
+
+      var hit = el("rect", { class: "hit", x: 0, y: y, width: W, height: rowH });
+      hit.addEventListener("mousemove", function (ev) {
+        showTip('<div class="tt-h">' + r.name + '</div>' +
+          '<div class="tt-row">Now vs own peak: <b>' + Math.round(r.pct) + '%</b></div>' +
+          (r.mark != null ? '<div class="tt-row">vs sustained (p95): <b>' + Math.round(r.mark) + '%</b></div>' : '') +
+          (r.note ? '<div class="tt-row">' + r.note + '</div>' : ''), ev.clientX, ev.clientY);
+      });
+      hit.addEventListener("mouseleave", hideTip);
+      svg.appendChild(hit);
+    });
+    document.getElementById(mount).appendChild(svg);
+  }
+
+  // --- geographic bubble map -------------------------------------------
+  // Real basemap (Natural Earth land + national borders, clipped and
+  // projected here with Web Mercator) drawn first, then one circle per place
+  // sized by the absolute change and coloured by its direction.
+  function mapChart(mount, opts) {
+    var b = opts.bbox, minLon = b[0], minLat = b[1], maxLon = b[2], maxLat = b[3];
+    function mercY(lat) { return Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)); }
+    var yTop = mercY(maxLat), yBot = mercY(minLat);
+    var lonSpan = maxLon - minLon, ySpan = yTop - yBot;  // Mercator units, north-positive
+
+    var m = { t: 14, r: 14, b: 14, l: 14 }, W = 860;
+    var pw = W - m.l - m.r;
+    var ph = pw * ySpan / (lonSpan * Math.PI / 180);
+    var H = Math.round(ph + m.t + m.b);
+
+    function X(lon) { return m.l + pw * (lon - minLon) / lonSpan; }
+    function Y(lat) { return m.t + ph * (yTop - mercY(lat)) / ySpan; }
+    function txt(s, x, y, anchor, cls) {
+      var t = el("text", { x: x, y: y, class: cls });
+      if (anchor) t.setAttribute("text-anchor", anchor);
+      t.textContent = s; return t;
+    }
+
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img" });
+    svg.setAttribute("aria-label", opts.aria || "Map of the change in container port calls by port.");
+    svg.appendChild(el("rect", { class: "map-water", x: m.l, y: m.t, width: pw, height: ph }));
+
+    var clipId = mount + "-clip", defs = el("defs"), cp = el("clipPath", { id: clipId });
+    cp.appendChild(el("rect", { x: m.l, y: m.t, width: pw, height: ph }));
+    defs.appendChild(cp); svg.appendChild(defs);
+    var g = el("g", { "clip-path": "url(#" + clipId + ")" });
+    svg.appendChild(g);
+
+    for (var lon = Math.ceil(minLon / 10) * 10; lon <= maxLon; lon += 10)
+      g.appendChild(el("line", { class: "map-grat", x1: X(lon), y1: m.t, x2: X(lon), y2: m.t + ph }));
+    for (var lat = Math.ceil(minLat / 10) * 10; lat <= maxLat; lat += 10)
+      g.appendChild(el("line", { class: "map-grat", x1: m.l, y1: Y(lat), x2: m.l + pw, y2: Y(lat) }));
+
+    function ring(r) {
+      return r.map(function (c, i) { return (i ? "L" : "M") + X(c[0]).toFixed(1) + " " + Y(c[1]).toFixed(1); }).join(" ") + "Z";
+    }
+    function draw(geom, cls) {
+      if (!geom || !geom.type) return;
+      var d = "";
+      if (geom.type === "Polygon" || geom.type === "MultiPolygon") {
+        var polys = geom.type === "Polygon" ? [geom.coordinates] : geom.coordinates;
+        polys.forEach(function (p) { p.forEach(function (r) { d += ring(r) + " "; }); });
+      } else if (geom.type === "LineString" || geom.type === "MultiLineString") {
+        var lines = geom.type === "LineString" ? [geom.coordinates] : geom.coordinates;
+        d = lines.map(function (ln) {
+          return ln.map(function (c, i) { return (i ? "L" : "M") + X(c[0]).toFixed(1) + " " + Y(c[1]).toFixed(1); }).join(" ");
+        }).join(" ");
+      }
+      if (d) g.appendChild(el("path", { d: d, class: cls, "fill-rule": "evenodd" }));
+    }
+    draw(opts.land, "map-land");
+    draw(opts.borders, "map-border");
+    svg.appendChild(el("rect", { x: m.l, y: m.t, width: pw, height: ph, fill: "none", stroke: "var(--map-coast)", "stroke-width": "1" }));
+
+    var rMax = 20, rMin = 3;
+    function radius(v) {
+      if (!opts.sizeMax) return rMin;
+      return Math.max(rMin, rMax * Math.sqrt(Math.abs(v) / opts.sizeMax));
+    }
+
+    // Bubbles largest-first so small ones stay clickable on top; the chokepoint
+    // marker always draws last so the bubbles never bury it.
+    var pts = opts.points.slice().sort(function (a, b) {
+      var ac = a.role === "chokepoint" ? 1 : 0, bc = b.role === "chokepoint" ? 1 : 0;
+      if (ac !== bc) return ac - bc;
+      return Math.abs(b.delta) - Math.abs(a.delta);
+    });
+    pts.forEach(function (p) {
+      var cx = X(p.lon), cy = Y(p.lat);
+      if (p.role === "chokepoint") {
+        var s = 8;
+        svg.appendChild(el("path", { class: "map-choke",
+          d: "M" + cx + " " + (cy - s) + " L" + (cx + s) + " " + cy + " L" + cx + " " + (cy + s) + " L" + (cx - s) + " " + cy + " Z" }));
+      } else {
+        var col = p.role === "gain" ? "var(--pos)" : "var(--neg)";
+        svg.appendChild(el("circle", { class: "map-bubble", cx: cx, cy: cy, r: radius(p.delta), fill: col, stroke: col }));
+      }
+      var hit = el("circle", { class: "hit", cx: cx, cy: cy, r: Math.max(radius(p.delta || 0), 11) });
+      hit.addEventListener("mousemove", function (ev) {
+        var ps = (p.pct >= 0 ? "+" : "") + Math.round(p.pct) + "%";
+        var rows = p.role === "chokepoint"
+          ? '<div class="tt-row">Container transits: <b>' + ps + ' of pre-crisis change</b></div>'
+          : '<div class="tt-row">Container calls: <b>' + ps + '</b></div>' +
+            '<div class="tt-row">Change: <b>' + (p.delta >= 0 ? "+" : "") + fmt(p.delta) + " " + (opts.sizeUnit || "") + '</b></div>';
+        showTip('<div class="tt-h">' + p.name + '</div>' + rows, ev.clientX, ev.clientY);
+      });
+      hit.addEventListener("mouseleave", hideTip);
+      svg.appendChild(hit);
+    });
+
+    var labelSet = {};
+    (opts.labels || []).forEach(function (nm) { labelSet[nm] = 1; });
+    pts.forEach(function (p) {
+      if (!labelSet[p.name]) return;
+      var cx = X(p.lon), cy = Y(p.lat);
+      var r = p.role === "chokepoint" ? 8 : radius(p.delta);
+      var left = p.labelSide === "left";
+      var t = txt(p.name, cx + (left ? -(r + 5) : r + 5), cy + 3.5 + (p.labelDy || 0),
+        left ? "end" : "start", "map-label");
+      svg.appendChild(t);
+    });
+
+    if (opts.sizeLegend && opts.sizeLegend.length) {
+      var vals = opts.sizeLegend.slice().sort(function (a, b) { return a - b; });
+      var bx = m.l + 16, by = m.t + ph - 14, keyG = el("g");
+      keyG.appendChild(txt("Circle area ≈ " + (opts.sizeUnit || "change"),
+        bx, by - radius(vals[vals.length - 1]) * 2 - 12, "start", "map-key-txt"));
+      var cur = bx + 2;
+      vals.forEach(function (v) {
+        var rr = radius(v); cur += rr;
+        keyG.appendChild(el("circle", { cx: cur, cy: by - rr - 3, r: rr, fill: "none", stroke: "var(--ink-3)", "stroke-width": "1" }));
+        keyG.appendChild(txt(String(v), cur, by + 11, "middle", "map-key-txt"));
+        cur += rr + 18;
+      });
+      svg.appendChild(keyG);
+    }
+
+    document.getElementById(mount).appendChild(svg);
+  }
+
   R.charts.forEach(function (c) {
     if (!document.getElementById(c.mount)) return;
     if (c.type === "line") lineChart(c.mount, c);
     else if (c.type === "diverging") divergingBars(c.mount, c.rows, c.maxAbs);
+    else if (c.type === "capacity") capacityBars(c.mount, c);
+    else if (c.type === "map") mapChart(c.mount, c);
   });
 })();
 """

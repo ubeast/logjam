@@ -146,7 +146,7 @@ wheels = [
 ]
 
 [[package]]
-name = "bottleneck-logistics"
+name = "logjam"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
@@ -160,6 +160,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "rich" },
     { name = "typer" },
+    { name = "websockets" },
 ]
 
 [package.optional-dependencies]
@@ -199,6 +200,7 @@ requires-dist = [
     { name = "streamlit", marker = "extra == 'dashboard'", specifier = ">=1.36" },
     { name = "typer", specifier = ">=0.12" },
     { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.30" },
+    { name = "websockets", specifier = ">=13.0" },
 ]
 provides-extras = ["dashboard", "api", "dev"]
 

@@ -7,7 +7,7 @@
 #   2. `match:`  a case-insensitive SQL LIKE pattern against the port name
 #               plus optional `iso3:` to disambiguate same-named ports
 #
-# Use `bottleneck ports --search "long beach"` to find portids / exact names.
+# Use `logjam ports --search "long beach"` to find portids / exact names.
 # This file is a starting point - extend it for the lanes you care about.
 
 default_metric: portcalls_container

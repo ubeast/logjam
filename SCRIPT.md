@@ -1,4 +1,4 @@
-# Code With Me — building `bottleneck-logistics`
+# Code With Me — building `logjam`
 
 A linear, follow-along screencast script. It reconstructs the project from an
 empty directory to a working tool in **8 segments (~65 min)**. No dead ends, no
@@ -47,7 +47,7 @@ the source of truth.
 
 **Runtime:** 6 min
 **Goal:** a GitHub-ready package skeleton with one place for every tunable.
-**Files:** `pyproject.toml`, `src/bottleneck_logistics/__init__.py`, `config.py`, `.gitignore`
+**Files:** `pyproject.toml`, `src/logjam/__init__.py`, `config.py`, `.gitignore`
 
 ### SAY
 
@@ -60,17 +60,17 @@ the source of truth.
 ### DO
 
 ```bash
-mkdir bottleneck-logistics && cd bottleneck-logistics
+mkdir logjam && cd logjam
 git init
-uv init --package --name bottleneck-logistics --python 3.11
-mkdir -p src/bottleneck_logistics/{ingest,store,analytics,dashboard,resources}
+uv init --package --name logjam --python 3.11
+mkdir -p src/logjam/{ingest,store,analytics,dashboard,resources}
 ```
 
 ### TYPE — `pyproject.toml`
 
 ```toml
 [project]
-name = "bottleneck-logistics"
+name = "logjam"
 version = "0.1.0"
 description = "Open-source logistics / supply-chain bottleneck and opportunity identifier"
 readme = "README.md"
@@ -97,14 +97,14 @@ api = ["fastapi>=0.111", "uvicorn>=0.30"]
 dev = ["pytest>=8.2", "pytest-cov>=5.0", "ruff>=0.5", "mypy>=1.10", "respx>=0.21"]
 
 [project.scripts]
-bottleneck = "bottleneck_logistics.cli:app"
+logjam = "logjam.cli:app"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/bottleneck_logistics"]
+packages = ["src/logjam"]
 
 [tool.ruff]
 line-length = 100
@@ -129,12 +129,12 @@ addopts = "-q"
   `pandas` for the transforms, `typer` + `rich` for the CLI.
 - **Optional-dependency groups**: the core install stays lean; `dashboard`
   pulls Streamlit, `dev` pulls the test tools.
-- `[project.scripts]` — installing the package gives us a `bottleneck` command
+- `[project.scripts]` — installing the package gives us a `logjam` command
   on the PATH.
 - `src/` layout plus `hatchling` — standard, boring, correct. Ruff and mypy
   strict from day one so we never dig out of a lint hole later.
 
-### TYPE — `src/bottleneck_logistics/__init__.py`
+### TYPE — `src/logjam/__init__.py`
 
 ```python
 """Open-source logistics / supply-chain bottleneck and opportunity identifier.
@@ -145,20 +145,20 @@ Pipeline overview
 2. ``store``     - normalise into a DuckDB analytical database.
 3. ``analytics`` - compute per-series baselines, flag bottlenecks, score opportunities.
 
-Everything is driven from :mod:`bottleneck_logistics.cli` or ``scripts/refresh.py``.
+Everything is driven from :mod:`logjam.cli` or ``scripts/refresh.py``.
 """
 
 __version__ = "0.1.0"
 ```
 
-### TYPE — `src/bottleneck_logistics/config.py`
+### TYPE — `src/logjam/config.py`
 
 ```python
 """Runtime configuration.
 
 All tunables live here so a follow-on developer has exactly one place to look.
-Override any field with an environment variable prefixed ``BNL_`` (e.g.
-``BNL_DB_PATH=/tmp/foo.duckdb``) or a ``.env`` file in the project root.
+Override any field with an environment variable prefixed ``LOGJAM_`` (e.g.
+``LOGJAM_DB_PATH=/tmp/foo.duckdb``) or a ``.env`` file in the project root.
 """
 
 from __future__ import annotations
@@ -172,10 +172,10 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="BNL_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="LOGJAM_", env_file=".env", extra="ignore")
 
     # --- Storage -------------------------------------------------------------
-    db_path: Path = Field(default=_PROJECT_ROOT / "data" / "bottleneck.duckdb")
+    db_path: Path = Field(default=_PROJECT_ROOT / "data" / "logjam.duckdb")
 
     # --- PortWatch (IMF) ArcGIS FeatureServer endpoints --------------------
     # Public, keyless. Refreshed weekly (Tuesdays ~09:00 ET). Verified 2026-08.
@@ -219,7 +219,7 @@ class Settings(BaseSettings):
     yoy_min_observations: int = 7  # need this many year-ago points or skip
     # Fraction of the year-ago level within which a series counts as "recovered".
     recovery_tolerance: float = 0.20
-    # `bottleneck recovery` evaluates a trailing window (not a single day) and
+    # `logjam recovery` evaluates a trailing window (not a single day) and
     # skips the most recent days, which PortWatch often under-reports.
     recovery_window_days: int = 7
     recovery_trailing_exclude_days: int = 2
@@ -240,7 +240,7 @@ settings = Settings()
 
 - Every magic number in the project lives here — window lengths, z-score
   thresholds, backfill span. A follow-on dev has one file to read.
-- `pydantic-settings` means each of these is overridable by a `BNL_`-prefixed
+- `pydantic-settings` means each of these is overridable by a `LOGJAM_`-prefixed
   env var or a `.env` file, with type coercion for free.
 - The two ArcGIS URLs are the entire external surface of v1.
 - Note the two baseline families already sketched here: a **short** 56-day
@@ -282,7 +282,7 @@ data/raw/
 
 ```bash
 uv sync --extra dev
-uv run python -c "from bottleneck_logistics.config import settings; print(settings.db_path)"
+uv run python -c "from logjam.config import settings; print(settings.db_path)"
 ```
 
 > Package imports, config resolves. Scaffold done.
@@ -293,7 +293,7 @@ uv run python -c "from bottleneck_logistics.config import settings; print(settin
 
 **Runtime:** 7 min
 **Goal:** one reusable function that pages through any ArcGIS FeatureServer layer.
-**Files:** `src/bottleneck_logistics/ingest/arcgis.py`
+**Files:** `src/logjam/ingest/arcgis.py`
 
 ### SAY
 
@@ -302,7 +302,7 @@ uv run python -c "from bottleneck_logistics.config import settings; print(settin
 > paging. That's annoying plumbing that has nothing to do with shipping — so we
 > isolate it in one generic function and never think about it again.
 
-### TYPE — `src/bottleneck_logistics/ingest/arcgis.py`
+### TYPE — `src/logjam/ingest/arcgis.py`
 
 ```python
 """Minimal ArcGIS FeatureServer query client.
@@ -320,7 +320,7 @@ from typing import Any
 
 import httpx
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 
 def query_all(
@@ -400,8 +400,8 @@ def query_all(
 
 ```bash
 uv run python -c "
-from bottleneck_logistics.ingest.arcgis import query_all
-from bottleneck_logistics.config import settings
+from logjam.ingest.arcgis import query_all
+from logjam.config import settings
 rows = query_all(settings.portwatch_chokepoints_url, where=\"date >= DATE '2026-08-01'\")
 print(next(rows))
 "
@@ -417,7 +417,7 @@ print(next(rows))
 **Runtime:** 10 min
 **Goal:** turn PortWatch's two wide layers into one tidy long DataFrame with a
 fixed shape.
-**Files:** `src/bottleneck_logistics/ingest/portwatch.py`, `ingest/__init__.py`
+**Files:** `src/logjam/ingest/portwatch.py`, `ingest/__init__.py`
 
 ### SAY
 
@@ -428,7 +428,7 @@ fixed shape.
 > one row per entity, per date, per metric — so everything downstream sees a
 > single shape no matter how many sources we add later.
 
-### TYPE — `src/bottleneck_logistics/ingest/portwatch.py`
+### TYPE — `src/logjam/ingest/portwatch.py`
 
 ```python
 """IMF PortWatch ingestion adapter.
@@ -467,8 +467,8 @@ from typing import Any
 
 import pandas as pd
 
-from bottleneck_logistics.config import settings
-from bottleneck_logistics.ingest.arcgis import query_all
+from logjam.config import settings
+from logjam.ingest.arcgis import query_all
 
 # Columns we keep as measures. Everything else (year/month/day/ObjectId) is
 # either redundant with ``date`` or ArcGIS bookkeeping.
@@ -602,7 +602,7 @@ def fetch_portwatch(
             half-open range so month-by-month backfill chunks do not overlap.
             ``since=None`` pulls the server's full history - a few million rows
             per year, so the pipeline chunks large backfills (see
-            :func:`bottleneck_logistics.pipeline.refresh`).
+            :func:`logjam.pipeline.refresh`).
 
     Returns:
         DataFrame with :data:`TIDY_COLUMNS`. ``entity_type`` is ``"port"`` or
@@ -658,7 +658,7 @@ def default_since(latest_stored: dt.date | None) -> dt.date:
   PortWatch **revises** its recent estimates as more satellite AIS lands. The
   store's upsert (next segment) makes that safe.
 
-### TYPE — `src/bottleneck_logistics/ingest/__init__.py`
+### TYPE — `src/logjam/ingest/__init__.py`
 
 ```python
 """Ingestion adapters.
@@ -673,7 +673,7 @@ Adding a new source (AISStream, Freightos, GDELT, ...) means adding a module
 here that produces that same shape - nothing downstream needs to change.
 """
 
-from bottleneck_logistics.ingest.portwatch import fetch_portwatch
+from logjam.ingest.portwatch import fetch_portwatch
 
 __all__ = ["fetch_portwatch"]
 ```
@@ -683,7 +683,7 @@ __all__ = ["fetch_portwatch"]
 ```bash
 uv run python -c "
 import datetime as dt
-from bottleneck_logistics.ingest.portwatch import fetch_portwatch
+from logjam.ingest.portwatch import fetch_portwatch
 df = fetch_portwatch(since=dt.date(2026, 8, 1), until=dt.date(2026, 8, 8))
 print(df.shape)
 print(df[df.entity_name.str.contains('Hormuz', case=False, na=False)].head())
@@ -698,7 +698,7 @@ print(df[df.entity_name.str.contains('Hormuz', case=False, na=False)].head())
 
 **Runtime:** 8 min
 **Goal:** an embedded analytical database with an idempotent upsert.
-**Files:** `src/bottleneck_logistics/store/db.py`, `store/loaders.py`, `store/__init__.py`
+**Files:** `src/logjam/store/db.py`, `store/loaders.py`, `store/__init__.py`
 
 ### SAY
 
@@ -708,7 +708,7 @@ print(df[df.entity_name.str.contains('Hormuz', case=False, na=False)].head())
 > `baseline` for the per-series norms we'll compute, and `signal` for the
 > bottlenecks and opportunities we detect.
 
-### TYPE — `src/bottleneck_logistics/store/db.py`
+### TYPE — `src/logjam/store/db.py`
 
 ```python
 """Connection handling and schema definition."""
@@ -720,7 +720,7 @@ from pathlib import Path
 
 import duckdb
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 # Bump when the schema changes in a non-additive way; ``init_schema`` is
 # additive-only today, so this is informational.
@@ -829,7 +829,7 @@ def latest_observation_date(
   database from an earlier version upgrades in place, no re-ingest.
 - `latest_observation_date` is what drives incremental refresh.
 
-### TYPE — `src/bottleneck_logistics/store/loaders.py`
+### TYPE — `src/logjam/store/loaders.py`
 
 ```python
 """Idempotent loaders: take a tidy DataFrame, upsert into ``observation``."""
@@ -839,7 +839,7 @@ from __future__ import annotations
 import duckdb
 import pandas as pd
 
-from bottleneck_logistics.ingest.portwatch import TIDY_COLUMNS
+from logjam.ingest.portwatch import TIDY_COLUMNS
 
 _REQUIRED = set(TIDY_COLUMNS)
 
@@ -910,20 +910,20 @@ def upsert_observations(
 - The column check up front turns a bad caller into a clear `ValueError` instead
   of a confusing SQL error.
 
-### TYPE — `src/bottleneck_logistics/store/__init__.py`
+### TYPE — `src/logjam/store/__init__.py`
 
 ```python
 """DuckDB analytical store.
 
-One embedded file (``data/bottleneck.duckdb`` by default). DuckDB is a good fit
+One embedded file (``data/logjam.duckdb`` by default). DuckDB is a good fit
 here: the workload is read-heavy analytical aggregation over a few million rows,
 there is no concurrent-writer requirement, and it needs zero server setup.
 Swap to Postgres/Timescale only if/when live AIS ingestion makes this
 write-hot.
 """
 
-from bottleneck_logistics.store.db import connect, init_schema, latest_observation_date
-from bottleneck_logistics.store.loaders import upsert_observations
+from logjam.store.db import connect, init_schema, latest_observation_date
+from logjam.store.loaders import upsert_observations
 
 __all__ = [
     "connect",
@@ -938,8 +938,8 @@ __all__ = [
 ```bash
 uv run python -c "
 import datetime as dt
-from bottleneck_logistics.ingest.portwatch import fetch_portwatch
-from bottleneck_logistics.store import connect, init_schema, upsert_observations
+from logjam.ingest.portwatch import fetch_portwatch
+from logjam.store import connect, init_schema, upsert_observations
 con = connect()
 init_schema(con)
 df = fetch_portwatch(since=dt.date(2026, 8, 1), until=dt.date(2026, 8, 15))
@@ -960,7 +960,7 @@ print('rows still:', con.execute('SELECT count(*) FROM observation').fetchone()[
 **Runtime:** 12 min
 **Goal:** for every `(entity, metric)` series, a robust rolling norm and a
 year-ago norm, each expressed as a z-score.
-**Files:** `src/bottleneck_logistics/analytics/baseline.py`
+**Files:** `src/logjam/analytics/baseline.py`
 
 ### SAY
 
@@ -974,7 +974,7 @@ year-ago norm, each expressed as a z-score.
 > **year-over-year** baseline: compare each day to the same calendar week a year
 > earlier. That stays honest until the disruption itself is over a year old.
 
-### TYPE — `src/bottleneck_logistics/analytics/baseline.py`
+### TYPE — `src/logjam/analytics/baseline.py`
 
 ```python
 """Rolling robust baseline for every (entity, metric) series."""
@@ -985,7 +985,7 @@ import duckdb
 import numpy as np
 import pandas as pd
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 # MAD -> sigma consistency constant for a normal distribution.
 _MAD_TO_SIGMA = 1.4826
@@ -1187,8 +1187,8 @@ def _fill_yoy_baseline(con: duckdb.DuckDBPyConnection) -> None:
 
 ```bash
 uv run python -c "
-from bottleneck_logistics.store import connect
-from bottleneck_logistics.analytics.baseline import compute_baselines
+from logjam.store import connect
+from logjam.analytics.baseline import compute_baselines
 con = connect()
 print('baseline rows:', compute_baselines(con))
 print(con.execute('''
@@ -1216,7 +1216,7 @@ print(con.execute('''
 > Two: given a blockage, where's the headroom to reroute? Three: for a
 > disruption we already know about — is it still going, or has it recovered?
 
-### TYPE — `src/bottleneck_logistics/analytics/detect.py`
+### TYPE — `src/logjam/analytics/detect.py`
 
 ```python
 """Bottleneck detection: flag days where flow collapsed vs a series' baseline."""
@@ -1227,7 +1227,7 @@ import json
 
 import duckdb
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 # Every PortWatch metric is "more == more flow" (port calls, transits, trade
 # volume, cargo capacity). A bottleneck is therefore always the *negative* tail.
@@ -1354,7 +1354,7 @@ def detect_bottlenecks(con: duckdb.DuckDBPyConnection) -> int:
 - The whole `detail` blob goes in as JSON — no schema change to carry
   per-signal context.
 
-### TYPE — `src/bottleneck_logistics/resources/substitution_groups.yaml`
+### TYPE — `src/logjam/resources/substitution_groups.yaml`
 
 ```yaml
 # Substitution groups: sets of ports that can realistically absorb each other's
@@ -1366,7 +1366,7 @@ def detect_bottlenecks(con: duckdb.DuckDBPyConnection) -> int:
 #   2. `match:`  a case-insensitive SQL LIKE pattern against the port name
 #               plus optional `iso3:` to disambiguate same-named ports
 #
-# Use `bottleneck ports --search "long beach"` to find portids / exact names.
+# Use `logjam ports --search "long beach"` to find portids / exact names.
 # This file is a starting point - extend it for the lanes you care about.
 
 default_metric: portcalls_container
@@ -1445,7 +1445,7 @@ groups:
 > name pattern with an optional country code. The last group is routes, not
 > ports — when Suez collapses, Cape of Good Hope traffic rises.
 
-### TYPE — `src/bottleneck_logistics/analytics/opportunity.py`
+### TYPE — `src/logjam/analytics/opportunity.py`
 
 ```python
 """Opportunity detection: bottleneck in one group member, headroom in another.
@@ -1468,7 +1468,7 @@ from typing import Any
 import duckdb
 import yaml
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 
 @dataclass(frozen=True)
@@ -1648,7 +1648,7 @@ def detect_opportunities(con: duckdb.DuckDBPyConnection) -> int:
 - `detail` carries both ends: which port is jammed and how far the alternative
   is running above its own norm.
 
-### TYPE — `src/bottleneck_logistics/analytics/recovery.py`
+### TYPE — `src/logjam/analytics/recovery.py`
 
 ```python
 """Recovery status: is a disruption still ongoing, or has flow returned to normal?
@@ -1665,7 +1665,7 @@ from dataclasses import dataclass
 
 import duckdb
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 # The "headline" total metric per entity type - what a human means by
 # "traffic through Hormuz" or "activity at Rotterdam".
@@ -1816,7 +1816,7 @@ def recovery_status(
   exactly right. Older than that and both numbers are depressed and it reads
   "recovered" when it means "stably degraded."
 
-### TYPE — `src/bottleneck_logistics/analytics/__init__.py`
+### TYPE — `src/logjam/analytics/__init__.py`
 
 ```python
 """Analytics: baselines, bottleneck detection, opportunity scoring.
@@ -1833,10 +1833,10 @@ group-relative positive z on an alternative port == spare capacity is moving
 (opportunity).
 """
 
-from bottleneck_logistics.analytics.baseline import compute_baselines
-from bottleneck_logistics.analytics.detect import detect_bottlenecks
-from bottleneck_logistics.analytics.opportunity import detect_opportunities
-from bottleneck_logistics.analytics.recovery import recovery_status
+from logjam.analytics.baseline import compute_baselines
+from logjam.analytics.detect import detect_bottlenecks
+from logjam.analytics.opportunity import detect_opportunities
+from logjam.analytics.recovery import recovery_status
 
 __all__ = [
     "compute_baselines",
@@ -1850,8 +1850,8 @@ __all__ = [
 
 ```bash
 uv run python -c "
-from bottleneck_logistics.store import connect
-from bottleneck_logistics.analytics import detect_bottlenecks, detect_opportunities
+from logjam.store import connect
+from logjam.analytics import detect_bottlenecks, detect_opportunities
 con = connect()
 print('bottlenecks:', detect_bottlenecks(con))
 print('opportunities:', detect_opportunities(con))
@@ -1866,10 +1866,10 @@ print('opportunities:', detect_opportunities(con))
 ## Segment 7 — Pipeline + CLI, run it for real
 
 **Runtime:** 6 min
-**Goal:** one `refresh()` that chains the whole thing, and a `bottleneck` command.
-**Files:** `src/bottleneck_logistics/pipeline.py`, `cli.py`, `scripts/refresh.py`
+**Goal:** one `refresh()` that chains the whole thing, and a `logjam` command.
+**Files:** `src/logjam/pipeline.py`, `cli.py`, `scripts/refresh.py`
 
-### TYPE — `src/bottleneck_logistics/pipeline.py`
+### TYPE — `src/logjam/pipeline.py`
 
 ```python
 """End-to-end refresh: ingest -> store -> baseline -> detect -> opportunities."""
@@ -1882,12 +1882,12 @@ from dataclasses import dataclass
 
 import duckdb
 
-from bottleneck_logistics.analytics.baseline import compute_baselines
-from bottleneck_logistics.analytics.detect import detect_bottlenecks
-from bottleneck_logistics.analytics.opportunity import detect_opportunities
-from bottleneck_logistics.ingest.portwatch import default_since, fetch_portwatch, month_starts
-from bottleneck_logistics.store.db import connect, init_schema, latest_observation_date
-from bottleneck_logistics.store.loaders import upsert_observations
+from logjam.analytics.baseline import compute_baselines
+from logjam.analytics.detect import detect_bottlenecks
+from logjam.analytics.opportunity import detect_opportunities
+from logjam.ingest.portwatch import default_since, fetch_portwatch, month_starts
+from logjam.store.db import connect, init_schema, latest_observation_date
+from logjam.store.loaders import upsert_observations
 
 # Above this span we ingest month-by-month so a first backfill (potentially
 # ~1M rows/year) never has to sit in memory all at once.
@@ -1971,16 +1971,16 @@ def refresh(
 - `progress` is a plain callback — the CLI passes `rich`'s logger, CI passes
   `print`, tests pass nothing.
 
-### TYPE — `src/bottleneck_logistics/cli.py`
+### TYPE — `src/logjam/cli.py`
 
 ```python
 """Command-line interface.
 
-    bottleneck refresh [--full]         pull data + recompute everything
-    bottleneck bottlenecks [--days 14]  list recent bottleneck signals
-    bottleneck opportunities [--days 14] list recent reroute opportunities
-    bottleneck ports --search "long beach"   look up PortWatch port ids
-    bottleneck status                   what's in the local database
+    logjam refresh [--full]         pull data + recompute everything
+    logjam bottlenecks [--days 14]  list recent bottleneck signals
+    logjam opportunities [--days 14] list recent reroute opportunities
+    logjam ports --search "long beach"   look up PortWatch port ids
+    logjam status                   what's in the local database
 """
 
 from __future__ import annotations
@@ -1991,10 +1991,10 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from bottleneck_logistics.analytics.recovery import recovery_status
-from bottleneck_logistics.config import settings
-from bottleneck_logistics.pipeline import refresh as run_refresh
-from bottleneck_logistics.store.db import connect, init_schema
+from logjam.analytics.recovery import recovery_status
+from logjam.config import settings
+from logjam.pipeline import refresh as run_refresh
+from logjam.store.db import connect, init_schema
 
 app = typer.Typer(add_completion=False, help="Logistics bottleneck & opportunity identifier.")
 console = Console()
@@ -2092,7 +2092,7 @@ def recovery(
 ) -> None:
     """Is a disruption still ongoing? Current throughput vs the same period a year ago.
 
-    Example: `bottleneck recovery -s hormuz`
+    Example: `logjam recovery -s hormuz`
     """
     con = connect(read_only=True)
     try:
@@ -2101,7 +2101,7 @@ def recovery(
         con.close()
 
     if not rows:
-        console.print(f'No baseline rows match "{search}". Try `bottleneck ports -s {search}`.')
+        console.print(f'No baseline rows match "{search}". Try `logjam ports -s {search}`.')
         return
 
     table = Table(title=f'Recovery status: "{search}"')
@@ -2181,7 +2181,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from bottleneck_logistics.pipeline import refresh
+from logjam.pipeline import refresh
 
 
 def main() -> int:
@@ -2205,10 +2205,10 @@ if __name__ == "__main__":
 ### RUN
 
 ```bash
-uv run bottleneck refresh --full      # first run: backfill + compute (~10 min)
-uv run bottleneck status
-uv run bottleneck recovery --search "hormuz"
-uv run bottleneck opportunities --days 30
+uv run logjam refresh --full      # first run: backfill + compute (~10 min)
+uv run logjam status
+uv run logjam recovery --search "hormuz"
+uv run logjam opportunities --days 30
 ```
 
 ### SAY
@@ -2241,7 +2241,7 @@ from __future__ import annotations
 import duckdb
 import pytest
 
-from bottleneck_logistics.store.db import init_schema
+from logjam.store.db import init_schema
 
 
 @pytest.fixture
@@ -2265,8 +2265,8 @@ import httpx
 import pytest
 import respx
 
-from bottleneck_logistics.config import settings
-from bottleneck_logistics.ingest.portwatch import (
+from logjam.config import settings
+from logjam.ingest.portwatch import (
     TIDY_COLUMNS,
     _parse_arcgis_date,
     _where_range,
@@ -2394,10 +2394,10 @@ import datetime as dt
 
 import pandas as pd
 
-from bottleneck_logistics.analytics.baseline import compute_baselines
-from bottleneck_logistics.analytics.detect import detect_bottlenecks
-from bottleneck_logistics.analytics.recovery import SEVERE, recovery_status
-from bottleneck_logistics.store.loaders import upsert_observations
+from logjam.analytics.baseline import compute_baselines
+from logjam.analytics.detect import detect_bottlenecks
+from logjam.analytics.recovery import SEVERE, recovery_status
+from logjam.store.loaders import upsert_observations
 
 
 def _series(entity_id: str, name: str, values: list[float], metric: str) -> pd.DataFrame:
@@ -2541,7 +2541,7 @@ jobs:
       - name: Restore database
         uses: actions/cache@v4
         with:
-          path: data/bottleneck.duckdb
+          path: data/logjam.duckdb
           key: bottleneck-db-${{ github.run_id }}
           restore-keys: bottleneck-db-
 
@@ -2549,7 +2549,7 @@ jobs:
         run: uv run python scripts/refresh.py ${{ inputs.full && '--full' || '' }}
 
       - name: Upload signals artifact
-        run: uv run bottleneck opportunities --days 30 > opportunities.txt || true
+        run: uv run logjam opportunities --days 30 > opportunities.txt || true
       - uses: actions/upload-artifact@v4
         with:
           name: signals
@@ -2585,7 +2585,7 @@ uv run mypy src
 
 ```bash
 uv run python scripts/reports/hormuz_container_2026.py
-git add -A && git commit -m "bottleneck-logistics: PortWatch vertical slice"
+git add -A && git commit -m "logjam: PortWatch vertical slice"
 ```
 
 ---

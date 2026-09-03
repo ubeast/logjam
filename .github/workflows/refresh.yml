@@ -12,6 +12,10 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: bottleneck-store        # don't race the AIS sampler for the DuckDB file
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
@@ -30,7 +34,7 @@ jobs:
       - name: Restore database
         uses: actions/cache@v4
         with:
-          path: data/bottleneck.duckdb
+          path: data/logjam.duckdb
           key: bottleneck-db-${{ github.run_id }}
           restore-keys: bottleneck-db-
 
@@ -38,7 +42,7 @@ jobs:
         run: uv run python scripts/refresh.py ${{ inputs.full && '--full' || '' }}
 
       - name: Upload signals artifact
-        run: uv run bottleneck opportunities --days 30 > opportunities.txt || true
+        run: uv run logjam opportunities --days 30 > opportunities.txt || true
       - uses: actions/upload-artifact@v4
         with:
           name: signals

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import duckdb
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 # The "headline" total metric per entity type - what a human means by
 # "traffic through Hormuz" or "activity at Rotterdam".

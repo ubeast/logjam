@@ -1,10 +1,12 @@
 """Command-line interface.
 
-    bottleneck refresh [--full]         pull data + recompute everything
-    bottleneck bottlenecks [--days 14]  list recent bottleneck signals
-    bottleneck opportunities [--days 14] list recent reroute opportunities
-    bottleneck ports --search "long beach"   look up PortWatch port ids
-    bottleneck status                   what's in the local database
+    logjam refresh [--full]         pull data + recompute everything
+    logjam bottlenecks [--days 14]  list recent bottleneck signals
+    logjam opportunities [--days 14] list recent reroute opportunities
+    logjam ports --search "long beach"   look up PortWatch port ids
+    logjam status                   what's in the local database
+    logjam ais-collect [--minutes 30]   sample the live AIS stream
+    logjam ais-reduce [--all]       fold AIS captures into the store
 """
 
 from __future__ import annotations
@@ -15,10 +17,10 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from bottleneck_logistics.analytics.recovery import recovery_status
-from bottleneck_logistics.config import settings
-from bottleneck_logistics.pipeline import refresh as run_refresh
-from bottleneck_logistics.store.db import connect, init_schema
+from logjam.analytics.recovery import recovery_status
+from logjam.config import settings
+from logjam.pipeline import refresh as run_refresh
+from logjam.store.db import connect, init_schema
 
 app = typer.Typer(add_completion=False, help="Logistics bottleneck & opportunity identifier.")
 console = Console()
@@ -32,9 +34,53 @@ def refresh(
     res = run_refresh(full_backfill=full, progress=lambda m: console.log(m))
     console.print(
         f"[green]Done.[/green] since={res.since}  observations={res.observations_written:,}  "
-        f"baseline_rows={res.baseline_rows:,}  "
+        f"ais_rows={res.ais_rows_written:,}  baseline_rows={res.baseline_rows:,}  "
         f"bottlenecks={res.bottlenecks:,}  opportunities={res.opportunities:,}"
     )
+
+
+@app.command("ais-collect")
+def ais_collect(
+    minutes: float = typer.Option(
+        None, "--minutes", "-m", help="Sample length. Default: LOGJAM_AIS_SAMPLE_MINUTES."
+    ),
+) -> None:
+    """Sample the live AIS stream into date-partitioned Parquet (needs an API key)."""
+    from logjam.ingest.aisstream import sample  # noqa: PLC0415 - optional path
+
+    try:
+        kept = sample(minutes, progress=lambda m: console.log(m))
+    except RuntimeError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    console.print(f"[green]Captured[/green] {kept:,} AIS messages → {settings.ais_raw_dir}")
+
+
+@app.command("ais-reduce")
+def ais_reduce(
+    all_days: bool = typer.Option(
+        False, "--all", help="Re-reduce every captured day, not just the pending ones."
+    ),
+) -> None:
+    """Fold captured AIS into the observation table (source 'aisstream')."""
+    from logjam.analytics.ais_reduce import (  # noqa: PLC0415
+        _raw_dates,
+        reduce_day,
+        reduce_pending,
+    )
+
+    con = connect()
+    try:
+        init_schema(con)
+        written = (
+            sum(reduce_day(con, d) for d in _raw_dates())
+            if all_days
+            else reduce_pending(con)
+        )
+    finally:
+        con.close()
+    console.print(f"[green]Reduced[/green] {written:,} AIS observation rows into the store.")
+    console.print("Run [bold]logjam refresh[/bold] to recompute baselines and signals.")
 
 
 def _signal_table(signal_type: str, days: int, limit: int) -> Table:
@@ -116,7 +162,7 @@ def recovery(
 ) -> None:
     """Is a disruption still ongoing? Current throughput vs the same period a year ago.
 
-    Example: `bottleneck recovery -s hormuz`
+    Example: `logjam recovery -s hormuz`
     """
     con = connect(read_only=True)
     try:
@@ -125,7 +171,7 @@ def recovery(
         con.close()
 
     if not rows:
-        console.print(f'No baseline rows match "{search}". Try `bottleneck ports -s {search}`.')
+        console.print(f'No baseline rows match "{search}". Try `logjam ports -s {search}`.')
         return
 
     table = Table(title=f'Recovery status: "{search}"')

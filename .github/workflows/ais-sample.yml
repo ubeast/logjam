@@ -1,0 +1,65 @@
+name: ais-sample
+
+# AISStream is a live push stream, so we sample it: connect for ~25 minutes a
+# few times a day, capture what is in the zone regions, then reduce the capture
+# into the store. A queue at anchor is a standing quantity, so a periodic
+# snapshot tracks it well.
+#
+# Requires a repository secret AISSTREAM_API_KEY (free key from aisstream.io).
+on:
+  schedule:
+    - cron: "17 */6 * * *"   # 4x/day, offset off the hour
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "Sample length (minutes)"
+        type: string
+        default: "25"
+
+concurrency:
+  group: bottleneck-store        # don't race the weekly PortWatch refresh
+  cancel-in-progress: false
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync deps
+        run: uv sync --extra dev
+
+      # Raw captures accumulate here between runs; the DuckDB file is the shared
+      # state store. Both are git-ignored and cached instead.
+      - name: Restore AIS captures
+        uses: actions/cache@v4
+        with:
+          path: data/ais_raw
+          key: bottleneck-ais-raw-${{ github.run_id }}
+          restore-keys: bottleneck-ais-raw-
+      - name: Restore database
+        uses: actions/cache@v4
+        with:
+          path: data/logjam.duckdb
+          key: bottleneck-db-${{ github.run_id }}
+          restore-keys: bottleneck-db-
+
+      - name: Sample the AIS stream
+        env:
+          LOGJAM_AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
+        run: uv run logjam ais-collect --minutes "${{ inputs.minutes || '25' }}"
+
+      - name: Reduce + recompute
+        run: |
+          uv run logjam ais-reduce
+          uv run logjam refresh
+
+      - name: Recent anchorage-queue signals
+        run: uv run logjam bottlenecks --days 14 > ais-signals.txt || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ais-signals
+          path: ais-signals.txt

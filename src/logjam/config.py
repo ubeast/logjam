@@ -1,8 +1,8 @@
 """Runtime configuration.
 
 All tunables live here so a follow-on developer has exactly one place to look.
-Override any field with an environment variable prefixed ``BNL_`` (e.g.
-``BNL_DB_PATH=/tmp/foo.duckdb``) or a ``.env`` file in the project root.
+Override any field with an environment variable prefixed ``LOGJAM_`` (e.g.
+``LOGJAM_DB_PATH=/tmp/foo.duckdb``) or a ``.env`` file in the project root.
 """
 
 from __future__ import annotations
@@ -16,10 +16,10 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="BNL_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="LOGJAM_", env_file=".env", extra="ignore")
 
     # --- Storage -------------------------------------------------------------
-    db_path: Path = Field(default=_PROJECT_ROOT / "data" / "bottleneck.duckdb")
+    db_path: Path = Field(default=_PROJECT_ROOT / "data" / "logjam.duckdb")
 
     # --- PortWatch (IMF) ArcGIS FeatureServer endpoints --------------------
     # Public, keyless. Refreshed weekly (Tuesdays ~09:00 ET). Verified 2026-08.
@@ -63,10 +63,32 @@ class Settings(BaseSettings):
     yoy_min_observations: int = 7  # need this many year-ago points or skip
     # Fraction of the year-ago level within which a series counts as "recovered".
     recovery_tolerance: float = 0.20
-    # `bottleneck recovery` evaluates a trailing window (not a single day) and
+    # `logjam recovery` evaluates a trailing window (not a single day) and
     # skips the most recent days, which PortWatch often under-reports.
     recovery_window_days: int = 7
     recovery_trailing_exclude_days: int = 2
+
+    # --- AISStream (live AIS) --------------------------------------------
+    # A push WebSocket, not a batch pull. We *sample* it: connect for
+    # ``ais_sample_minutes``, capture position reports inside the zone bounding
+    # boxes, disconnect, then reduce the raw capture to daily per-zone metrics
+    # (vessels at anchor = a queue; vessels moving through a chokepoint = a
+    # transit-rate cross-check on PortWatch). Free API key required - register
+    # at https://aisstream.io and set ``LOGJAM_AISSTREAM_API_KEY``.
+    aisstream_api_key: str = ""
+    aisstream_url: str = "wss://stream.aisstream.io/v0/stream"
+    ais_raw_dir: Path = Field(default=_PROJECT_ROOT / "data" / "ais_raw")
+    ais_sample_minutes: int = 30
+    # A vessel counts as "at anchor" below this speed over ground (knots) or with
+    # an AIS navigational status of 1 (at anchor) / 5 (moored).
+    ais_anchor_max_sog_kn: float = 1.0
+    # Below this many raw messages for a day we skip the reduce - too thin a
+    # sample to trust the counts.
+    ais_min_messages_per_day: int = 200
+    # Raw captures are deleted this many days after they have been reduced, so
+    # data/ais_raw/ does not grow without bound. The reduced daily metrics stay
+    # in the store; only the bulky raw Parquet is pruned.
+    ais_raw_retention_days: int = 21
 
     @property
     def resources_dir(self) -> Path:
@@ -75,6 +97,15 @@ class Settings(BaseSettings):
     @property
     def substitution_groups_path(self) -> Path:
         return self.resources_dir / "substitution_groups.yaml"
+
+    @property
+    def ais_zones_path(self) -> Path:
+        return self.resources_dir / "ais_zones.yaml"
+
+    @property
+    def geo_dir(self) -> Path:
+        """Static geographic assets: PortWatch coordinates + the brief basemap."""
+        return self.resources_dir / "geo"
 
 
 settings = Settings()

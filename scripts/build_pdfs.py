@@ -150,7 +150,7 @@ def main() -> None:
     md_to_pdf(
         ROOT / "docs" / "METHODOLOGY.md",
         ROOT / "docs" / "METHODOLOGY.pdf",
-        title="bottleneck-logistics — Methodology",
+        title="logjam — Methodology",
     )
 
 

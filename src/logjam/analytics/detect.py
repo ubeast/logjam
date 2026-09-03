@@ -6,7 +6,7 @@ import json
 
 import duckdb
 
-from bottleneck_logistics.config import settings
+from logjam.config import settings
 
 # Every PortWatch metric is "more == more flow" (port calls, transits, trade
 # volume, cargo capacity). A bottleneck is therefore always the *negative* tail.
@@ -17,6 +17,8 @@ _BOTTLENECK_METRICS_LIKE = (
     "export%",
     "n\\_%",  # chokepoint transit counts (escaped _ for LIKE)
     "capacity%",
+    "vessels\\_moving",   # AIS: fewer vessels under way near a port == blocked
+    "ais\\_transiting",   # AIS: fewer vessels moving through a chokepoint == blocked
 )
 
 
@@ -106,6 +108,79 @@ def detect_bottlenecks(con: duckdb.DuckDBPyConnection) -> int:
         payload.append(
             (etype, eid, ename, metric, obs_date, value, report_exp,
              report_z, abs(report_z), detail)
+        )
+
+    con.executemany(
+        """
+        INSERT INTO signal
+            (signal_type, entity_type, entity_id, entity_name, metric, obs_date,
+             value, expected, robust_z, severity, detail)
+        VALUES ('bottleneck', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        payload,
+    )
+    return len(payload)
+
+
+# AIS metrics where *more* means flow is blocked - the bottleneck is the
+# POSITIVE tail (a growing anchorage queue), the mirror image of every
+# PortWatch metric. Kept out of `detect_bottlenecks` so its sign logic stays
+# simple.
+_CONGESTION_METRICS = ("vessels_at_anchor",)
+
+
+def detect_congestion(con: duckdb.DuckDBPyConnection) -> int:
+    """Flag AIS anchorage-queue spikes as bottleneck signals. Returns rows written.
+
+    A day is flagged when the short baseline z-score for a ``_CONGESTION_METRICS``
+    series is at or **above** ``+bottleneck_z_threshold``: materially more vessels
+    sitting at anchor than the trailing norm. ``detail.trigger`` is
+    ``"ais_congestion"`` so these are distinguishable from throughput collapses.
+    """
+    z = settings.bottleneck_z_threshold
+    min_obs = settings.baseline_min_observations
+    placeholders = ", ".join("?" for _ in _CONGESTION_METRICS)
+
+    rows = con.execute(
+        f"""
+        SELECT b.entity_type, b.entity_id, o.entity_name, b.metric, b.obs_date,
+               b.value, b.expected, b.robust_z, b.n_obs
+        FROM baseline b
+        JOIN (
+            SELECT entity_type, entity_id, any_value(entity_name) AS entity_name
+            FROM observation GROUP BY entity_type, entity_id
+        ) o USING (entity_type, entity_id)
+        WHERE b.metric IN ({placeholders})
+          AND b.robust_z >= ? AND b.n_obs >= ?
+        """,
+        [*_CONGESTION_METRICS, abs(z), min_obs],
+    ).fetchall()
+
+    con.execute(
+        "DELETE FROM signal WHERE signal_type = 'bottleneck' "
+        f"AND metric IN ({placeholders})",
+        list(_CONGESTION_METRICS),
+    )
+    if not rows:
+        return 0
+
+    payload = []
+    for etype, eid, ename, metric, obs_date, value, expected, rz, n_obs in rows:
+        rise_pct = None if not expected else round(100 * (value - expected) / expected, 1)
+        detail = json.dumps(
+            {
+                "trigger": "ais_congestion",
+                "rise_pct_vs_expected": rise_pct,
+                "short": {
+                    "expected": round(expected, 2) if expected is not None else None,
+                    "robust_z": round(rz, 2) if rz is not None else None,
+                    "n_obs": int(n_obs) if n_obs is not None else None,
+                    "window_days": settings.baseline_window_days,
+                },
+            }
+        )
+        payload.append(
+            (etype, eid, ename, metric, obs_date, value, expected, rz, abs(rz), detail)
         )
 
     con.executemany(

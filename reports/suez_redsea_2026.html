@@ -403,7 +403,7 @@
     <p class="dek">Total transits have partly recovered on the back of tankers and bulk. Container shipping stayed on the Cape route, and the data shows no trend back.</p>
     <div class="byline">
       <span><b>By</b> Michael Schertz</span>
-      <span><b>Tooling</b> <a href="https://github.com/ubeast/bottleneck-logistics">bottleneck-logistics</a> (open-source)</span>
+      <span><b>Tooling</b> <a href="https://github.com/ubeast/logjam">logjam</a> (open-source)</span>
       <span><b>Generated</b> 30 Aug 2026</span>
       <span><b>Source</b> IMF PortWatch</span>
       <span><b>Method</b> see §&nbsp;Method &amp; provenance</span>
@@ -532,7 +532,7 @@
   <div class="wrap">
     <div class="sec-head"><span class="sec-num">§</span><h2>Method &amp; provenance</h2></div>
     <div class="prose">
-      <p>Every figure in this brief is reproducible from a local database built by the open-source <code>bottleneck-logistics</code> tool and a single generator script. Nothing is hand-transcribed.</p>
+      <p>Every figure in this brief is reproducible from a local database built by the open-source <code>logjam</code> tool and a single generator script. Nothing is hand-transcribed.</p>
     </div>
     <dl>
       <dt>Data source</dt>
@@ -546,7 +546,7 @@
       <dt>Reroute analysis</dt>
       <dd>The Cape of Good Hope is the route substitute (<code>n_container</code>, chokepoint 7). Port-level comparison on <code>portcalls_container</code>, July 2026 vs the same 2023 window, for East Mediterranean transshipment hubs, Egyptian canal ports, Colombo, and South African / Red Sea ports.</dd>
       <dt>Reproduce</dt>
-      <dd>Clone github.com/ubeast/bottleneck-logistics, backfill the database to 2023, then <code>uv run python scripts/reports/suez_redsea_2026.py</code>. Full method in <code>docs/METHODOLOGY.md</code>.</dd>
+      <dd>Clone github.com/ubeast/logjam, backfill the database to 2023, then <code>uv run python scripts/reports/suez_redsea_2026.py</code>. Full method in <code>docs/METHODOLOGY.md</code>.</dd>
     </dl>
     <p class="prose" style="margin-top:2rem"><strong>Limitations</strong></p>
     <ul class="limits">
@@ -561,7 +561,7 @@
 
 <footer class="colophon">
   <div class="wrap">
-    Michael Schertz · built with <a href="https://github.com/ubeast/bottleneck-logistics">bottleneck-logistics</a>, an open-source logistics bottleneck &amp; opportunity identifier<br />
+    Michael Schertz · built with <a href="https://github.com/ubeast/logjam">logjam</a>, an open-source logistics bottleneck &amp; opportunity identifier<br />
     Data © IMF PortWatch, used under its free public-use terms · Brief generated 30 Aug 2026<br />
     This document reports analysis of public shipping data. It is not affiliated with or endorsed by the IMF.
   </div>

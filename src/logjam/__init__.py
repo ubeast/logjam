@@ -6,7 +6,7 @@ Pipeline overview
 2. ``store``     - normalise into a DuckDB analytical database.
 3. ``analytics`` - compute per-series baselines, flag bottlenecks, score opportunities.
 
-Everything is driven from :mod:`bottleneck_logistics.cli` or ``scripts/refresh.py``.
+Everything is driven from :mod:`logjam.cli` or ``scripts/refresh.py``.
 """
 
 __version__ = "0.1.0"

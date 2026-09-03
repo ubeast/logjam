@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from bottleneck_logistics.pipeline import refresh
+from logjam.pipeline import refresh
 
 
 def main() -> int:
@@ -21,7 +21,7 @@ def main() -> int:
     res = refresh(full_backfill=args.full, progress=lambda m: print(f"... {m}", flush=True))
     print(
         f"since={res.since} observations={res.observations_written} "
-        f"baseline_rows={res.baseline_rows} "
+        f"ais_rows={res.ais_rows_written} baseline_rows={res.baseline_rows} "
         f"bottlenecks={res.bottlenecks} opportunities={res.opportunities}"
     )
     return 0

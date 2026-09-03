@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **By** | Michael Schertz |
-| **Tooling** | [`bottleneck-logistics`](https://github.com/ubeast/bottleneck-logistics) (open-source) |
+| **Tooling** | [`logjam`](https://github.com/ubeast/logjam) (open-source) |
 | **Generated** | 30 Aug 2026 |
 | **Data as of** | 23 Aug 2026 |
 | **Source** | IMF PortWatch (`portwatch.imf.org`) |
@@ -73,7 +73,7 @@ Two caveats bound this read. PortWatch measures vessel movements, not their caus
 
 ## Method & provenance
 
-Every figure in this brief is reproducible from a local database built by the open-source `bottleneck-logistics` tool and a single generator script. Nothing is hand-transcribed.
+Every figure in this brief is reproducible from a local database built by the open-source `logjam` tool and a single generator script. Nothing is hand-transcribed.
 
 **Data source.** IMF PortWatch (portwatch.imf.org) — daily maritime activity estimated from satellite AIS on ~90,000 ships, via the UN Global Platform. Free public use with attribution. Backfill covers 1 Jan 2023 – 23 Aug 2026.
 
@@ -85,7 +85,7 @@ Every figure in this brief is reproducible from a local database built by the op
 
 **Reroute analysis.** The Cape of Good Hope is the route substitute (`n_container`, chokepoint 7). Port-level comparison on `portcalls_container`, July 2026 vs the same 2023 window, for East Mediterranean transshipment hubs, Egyptian canal ports, Colombo, and South African / Red Sea ports.
 
-**Reproduce.** Clone github.com/ubeast/bottleneck-logistics, backfill the database to 2023, then `uv run python scripts/reports/suez_redsea_2026.py`. Full method in `docs/METHODOLOGY.md`.
+**Reproduce.** Clone github.com/ubeast/logjam, backfill the database to 2023, then `uv run python scripts/reports/suez_redsea_2026.py`. Full method in `docs/METHODOLOGY.md`.
 
 ### Limitations
 
@@ -97,4 +97,4 @@ Every figure in this brief is reproducible from a local database built by the op
 
 ---
 
-*Michael Schertz · built with [`bottleneck-logistics`](https://github.com/ubeast/bottleneck-logistics), an open-source logistics bottleneck & opportunity identifier. Data © IMF PortWatch, used under its free public-use terms. This document reports analysis of public shipping data; it is not affiliated with or endorsed by the IMF.*
+*Michael Schertz · built with [`logjam`](https://github.com/ubeast/logjam), an open-source logistics bottleneck & opportunity identifier. Data © IMF PortWatch, used under its free public-use terms. This document reports analysis of public shipping data; it is not affiliated with or endorsed by the IMF.*

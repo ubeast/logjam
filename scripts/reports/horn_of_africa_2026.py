@@ -403,7 +403,7 @@ def main() -> None:
              "July 2026 vs the same 2023 window, for Djibouti, Salalah, the Saudi Red "
              "Sea ports, Aqaba, Port Sudan, and East African feeder ports. The Cape of "
              "Good Hope (chokepoint 7) is the route substitute."),
-            ("Reproduce", "Clone github.com/ubeast/bottleneck-logistics, backfill the "
+            ("Reproduce", "Clone github.com/ubeast/logjam, backfill the "
              "database to 2023, then `uv run python "
              "scripts/reports/horn_of_africa_2026.py`. Full method in "
              "`docs/METHODOLOGY.md`."),

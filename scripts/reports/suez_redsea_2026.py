@@ -14,7 +14,7 @@ Output:
     reports/suez_redsea_2026.html
 
 Needs a store backfilled to at least 2023 (a genuine pre-crisis baseline) —
-``BNL_INITIAL_BACKFILL_DAYS=1400 uv run bottleneck refresh --full`` or the
+``LOGJAM_INITIAL_BACKFILL_DAYS=1400 uv run logjam refresh --full`` or the
 ``scripts/`` one-off backfill.
 """
 
@@ -82,7 +82,7 @@ def main() -> None:
     if cov[0] > dt.date(2023, 10, 1):
         sys.exit(
             f"store starts {cov[0]} — need pre-crisis 2023 data. Backfill first "
-            "(BNL_INITIAL_BACKFILL_DAYS=1400 uv run bottleneck refresh --full)."
+            "(LOGJAM_INITIAL_BACKFILL_DAYS=1400 uv run logjam refresh --full)."
         )
 
     # ---- chokepoint before/after ------------------------------------------
@@ -397,7 +397,7 @@ def main() -> None:
              "`portcalls_container`, July 2026 vs the same 2023 window, for East "
              "Mediterranean transshipment hubs, Egyptian canal ports, Colombo, and "
              "South African / Red Sea ports."),
-            ("Reproduce", "Clone github.com/ubeast/bottleneck-logistics, backfill the "
+            ("Reproduce", "Clone github.com/ubeast/logjam, backfill the "
              "database to 2023, then `uv run python "
              "scripts/reports/suez_redsea_2026.py`. Full method in "
              "`docs/METHODOLOGY.md`."),

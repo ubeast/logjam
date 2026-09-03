@@ -8,8 +8,8 @@ import httpx
 import pytest
 import respx
 
-from bottleneck_logistics.config import settings
-from bottleneck_logistics.ingest.portwatch import (
+from logjam.config import settings
+from logjam.ingest.portwatch import (
     TIDY_COLUMNS,
     _parse_arcgis_date,
     _where_range,
