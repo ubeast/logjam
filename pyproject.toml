@@ -1,7 +1,7 @@
 [project]
 name = "logjam"
 version = "0.1.0"
-description = "Open-source logistics / supply-chain bottleneck and opportunity identifier"
+description = "Detect where maritime trade flow is blocked and where it reroutes, from free public data (IMF PortWatch, with a live-AIS queue adapter)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

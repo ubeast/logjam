@@ -15,8 +15,19 @@
 # (a square `chokepoint_half_deg` degrees to a side, centred on the chokepoint),
 # so they are not listed here.
 #
-# v1 scope is the geography of the current disruption briefs - the Persian Gulf,
-# the Red Sea, and the north-west Indian Ocean. Widen `regions` to cover more.
+# NOTE ON COVERAGE. The regions below match the disruption briefs (Persian Gulf,
+# Red Sea, NW Indian Ocean) - but the FREE AISStream feed is terrestrial AIS and
+# has ~zero coverage there (verified: 0 msg/s for the Strait of Hormuz vs 26/s
+# for the North Sea). To see the queue signal work against the free feed, replace
+# these regions and ports with a well-covered European hub, e.g.:
+#
+#   regions:
+#     - name: North Sea & English Channel
+#       bbox: [[49.0, -5.0], [54.5, 9.0]]
+#   ports: [rotterdam, antwerp, hamburg, bremerhaven, felixstowe, le havre]
+#
+# For the Gulf / Red Sea you need a paid satellite-AIS source. See
+# docs/METHODOLOGY.md section 1a.
 
 chokepoint_half_deg: 0.35   # ~ +/- 35 km box around each chokepoint centre
 port_radius_km: 25.0        # anchorage catchment radius around a port centre

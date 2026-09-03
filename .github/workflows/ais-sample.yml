@@ -17,7 +17,7 @@ on:
         default: "25"
 
 concurrency:
-  group: bottleneck-store        # don't race the weekly PortWatch refresh
+  group: logjam-store        # don't race the weekly PortWatch refresh
   cancel-in-progress: false
 
 jobs:
@@ -38,14 +38,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: data/ais_raw
-          key: bottleneck-ais-raw-${{ github.run_id }}
-          restore-keys: bottleneck-ais-raw-
+          key: logjam-ais-raw-${{ github.run_id }}
+          restore-keys: logjam-ais-raw-
       - name: Restore database
         uses: actions/cache@v4
         with:
           path: data/logjam.duckdb
-          key: bottleneck-db-${{ github.run_id }}
-          restore-keys: bottleneck-db-
+          key: logjam-db-${{ github.run_id }}
+          restore-keys: logjam-db-
 
       - name: Sample the AIS stream
         env:

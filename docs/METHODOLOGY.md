@@ -10,8 +10,10 @@ Repository: <https://github.com/ubeast/logjam>
 
 ## 1. Data source
 
-Everything in v1 comes from **[IMF PortWatch](https://portwatch.imf.org)**, a
-free public platform run by the IMF with the UN Global Platform. PortWatch
+Every figure the tool produces today comes from
+**[IMF PortWatch](https://portwatch.imf.org)**, a free public platform run by the
+IMF with the UN Global Platform. (A second source, AISStream, has a working
+adapter but the free feed does not cover v1's geography — §1a.) PortWatch
 estimates daily maritime activity from satellite AIS (Automatic Identification
 System) signals on ~90,000 ships, published as two ArcGIS feature layers:
 
@@ -48,8 +50,26 @@ a free WebSocket feed of raw AIS position reports (needs a free API key). It is 
 *push* stream, not a batch endpoint, so the tool **samples** it: connect for a
 fixed number of minutes (`ais_sample_minutes`, default 30), capture every
 position report inside the subscription regions, disconnect, and append the raw
-rows to date-partitioned Parquet under `data/ais_raw/` (git-ignored). A separate
-step reduces one day of captures to per-zone daily metrics.
+rows to date-partitioned Parquet under `data/ais_raw/` (git-ignored). AISStream
+resets a long-lived connection every few minutes with no close frame, so the
+sampler reconnects and re-subscribes until the sample budget is spent, flushing
+what it has captured before each reconnect. A separate step reduces one day of
+captures to per-zone daily metrics.
+
+> **Coverage — read before relying on this.** AISStream is *terrestrial* AIS:
+> its data comes from volunteers running shore receivers, so coverage exists
+> where those receivers are — dense across Europe and North America, and
+> **effectively zero across the Persian Gulf, Red Sea, Bab el-Mandeb and the
+> Arabian Sea.** Verified live (Sep 2026): 45-second probes returned ~26 msg/s
+> for the North Sea and ~8 msg/s for the western Mediterranean, but **0** for
+> the Strait of Hormuz, the Red Sea, Suez / Port Said, and NW India. So the AIS
+> adapter is fully wired and correct, but with the free feed it **cannot
+> populate the geography of the disruption briefs in [`reports/`](../reports/)**
+> — those all rely on PortWatch, which is itself satellite-AIS-derived and
+> already covers the region. Getting `vessels_at_anchor` for a Gulf port needs a
+> paid satellite-AIS source (Spire, Datalastic, Kpler/MarineTraffic). Point
+> `resources/ais_zones.yaml` at a European port to see the queue signal work
+> against the free feed.
 
 **Geofences** (`resources/ais_zones.yaml`): a circular anchorage catchment
 (`port_radius_km`, default 25 km) around each watch-listed port, and a square box
@@ -250,11 +270,13 @@ generator after any `logjam refresh` to regenerate its figures.
 
 ## 8. Known limitations
 
-1. **AIS is sampled, not continuous.** `vessels_at_anchor` / `ais_transiting`
-   count what was in the zone during a ~30-minute window, not a full day. A
-   queue (standing quantity) survives this well; a transit *rate* is only a
-   proxy. Terrestrial AIS coverage is strong near ports and thin far offshore,
-   and the Persian Gulf has known GPS interference. Berth-dwell time still needs
+1. **AIS coverage is the binding constraint, not the sampling.** The free
+   AISStream feed is terrestrial-only and has **no usable coverage in the Gulf /
+   Red Sea / Arabian Sea** (§1a) — the exact water the briefs cover. Where
+   coverage *does* exist (Europe, North America), a further caveat applies:
+   `vessels_at_anchor` / `ais_transiting` count what was in the zone during a
+   ~30-minute sample, not a full day — a queue (standing quantity) survives this
+   well; a transit *rate* is only a proxy. Berth-dwell time still needs
    per-vessel state tracking (roadmap).
 2. **YoY ≠ pre-crisis** for disruptions over a year old (§3b).
 3. **Trailing-day under-reporting.** The newest ~2 weeks of PortWatch data read

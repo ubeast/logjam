@@ -13,6 +13,13 @@ many vessels are sitting at anchor off a port (a queue is a standing quantity)
 and roughly how busy a chokepoint is; it is not a complete transit census.
 
 Needs a free API key from https://aisstream.io - set ``LOGJAM_AISSTREAM_API_KEY``.
+
+Coverage caveat: AISStream is *terrestrial* AIS (volunteer shore receivers), so
+it covers Europe and North America well and the Persian Gulf / Red Sea / Arabian
+Sea essentially not at all. The adapter is correct but the free feed cannot
+populate the geography of the disruption briefs - re-point
+``resources/ais_zones.yaml`` at a European port, or use a paid satellite-AIS
+source. See ``docs/METHODOLOGY.md`` section 1a.
 """
 
 from __future__ import annotations
@@ -27,6 +34,7 @@ from typing import Any
 import duckdb
 import pandas as pd
 import websockets
+from websockets.exceptions import WebSocketException
 
 from logjam.config import settings
 from logjam.ingest.ais_zones import subscription_boxes
@@ -148,28 +156,62 @@ async def _run(minutes: float, *, progress: Callable[[str], None]) -> int:
     kept = 0
 
     progress(f"connecting to AISStream · {len(boxes)} regions · sampling {minutes:g} min")
-    async with websockets.connect(settings.aisstream_url, ping_interval=20) as ws:
-        await ws.send(json.dumps(sub))
+    confirmed = False
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + minutes * 60
+    attempt = 0
+
+    # AISStream drops long-lived connections every few minutes (a TCP reset, no
+    # close frame). Reconnect and resubscribe until the wall-clock sample budget
+    # is spent, flushing the buffer before every reconnect so a reset never
+    # costs us the rows captured so far.
+    while (remaining := deadline - loop.time()) > 0:
+        attempt += 1
         try:
-            async with asyncio.timeout(minutes * 60):
-                async for message in ws:
-                    total += 1
-                    try:
-                        payload = json.loads(message)
-                    except (ValueError, TypeError):
-                        continue
-                    if "error" in payload:
-                        raise RuntimeError(f"AISStream error: {payload['error']}")
-                    row = _row_from_message(payload, dt.datetime.now(dt.UTC))
-                    if row is None:
-                        continue
-                    buffer.append(row)
-                    kept += 1
-                    if len(buffer) >= _FLUSH_EVERY:
-                        _flush(buffer, raw_dir)
-                        progress(f"  {kept:,} kept / {total:,} seen")
-        except TimeoutError:
-            pass
+            async with websockets.connect(settings.aisstream_url, ping_interval=20) as ws:
+                await ws.send(json.dumps(sub))
+                try:
+                    async with asyncio.timeout(remaining):
+                        async for message in ws:
+                            total += 1
+                            try:
+                                payload = json.loads(message)
+                            except (ValueError, TypeError):
+                                continue
+                            err = payload.get("error") or payload.get("Error")
+                            if err:
+                                raise RuntimeError(f"AISStream rejected the subscription: {err}")
+                            if payload.get("MessageType") == "SubscriptionConfirmation":
+                                confirmed = True
+                                progress("  subscription confirmed")
+                                continue
+                            row = _row_from_message(payload, dt.datetime.now(dt.UTC))
+                            if row is None:
+                                continue
+                            buffer.append(row)
+                            kept += 1
+                            if len(buffer) >= _FLUSH_EVERY:
+                                _flush(buffer, raw_dir)
+                                progress(f"  {kept:,} kept / {total:,} seen")
+                except TimeoutError:
+                    break  # full sample duration elapsed
+                # `async for` returned without a timeout: server closed cleanly.
+                _flush(buffer, raw_dir)
+                progress(f"  stream closed by server · {kept:,} kept · reconnecting")
+                await asyncio.sleep(1)
+        except (OSError, WebSocketException) as exc:
+            _flush(buffer, raw_dir)
+            # First connection, no confirmation, nothing received → almost
+            # certainly a bad key or a malformed bounding box, not a transient
+            # reset. Surface it instead of retrying to the deadline.
+            if attempt == 1 and not confirmed and total == 0:
+                raise RuntimeError(
+                    "AISStream closed the connection with no data. Usual causes: an "
+                    "invalid LOGJAM_AISSTREAM_API_KEY, or a malformed bounding box in "
+                    "resources/ais_zones.yaml."
+                ) from exc
+            progress(f"  {type(exc).__name__} · {kept:,} kept · reconnecting")
+            await asyncio.sleep(min(2 * attempt, 10))
 
     _flush(buffer, raw_dir)
     progress(f"done · {kept:,} messages kept from {total:,} received → {raw_dir}")

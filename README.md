@@ -22,25 +22,37 @@ surfaces the reroute.
 
 ## Status
 
-**v1 vertical slice — IMF PortWatch only.** Pipeline is end to end:
-ingest -> DuckDB -> rolling robust baseline -> bottleneck signals -> opportunity signals,
-driven by a CLI and a weekly GitHub Actions refresh.
+**v1 — working end to end on IMF PortWatch.** Pipeline:
+PortWatch (daily port calls + chokepoint transits, weekly refresh) -> DuckDB ->
+rolling robust baseline + year-over-year baseline -> bottleneck signals ->
+opportunity signals -> `recovery` verdicts, driven by a CLI and a weekly GitHub
+Actions refresh. Three reproducible disruption briefs live in [`reports/`](reports/).
+
+A second ingest path — a sampled **AISStream** feed for the queue signal PortWatch
+lacks — is fully wired but **coverage-blocked for v1's geography**: see below.
 
 ### What PortWatch can and cannot tell us
 
 PortWatch is a **throughput** signal (vessels arriving / transiting), not a
-**queue** signal. The **AISStream adapter** adds the queue signal: it samples the
-live AIS stream and counts vessels sitting at anchor off a port (`vessels_at_anchor`)
-and vessels moving through a chokepoint (`ais_transiting`, a same-day cross-check
-on PortWatch's weekly `n_total`). Both write into the same `observation` table, so
-baselines, detection, and the `recovery` command pick them up unchanged.
+**queue** signal — it can't tell you how many ships are sitting at anchor waiting
+for a berth. The **AISStream adapter** is built to add that (`vessels_at_anchor`
+per port, `ais_transiting` per chokepoint, folded into the same `observation`
+table so baselines and detection pick them up unchanged).
+
+**But the free AISStream feed is terrestrial AIS** — volunteer shore receivers,
+so coverage is Europe / North America and **effectively zero across the Persian
+Gulf, Red Sea and Arabian Sea**, which is exactly the water the briefs cover.
+Verified live: ~26 msg/s for the North Sea, **0** for the Strait of Hormuz. The
+Gulf queue signal needs a paid satellite-AIS source (Spire, Datalastic,
+Kpler/MarineTraffic); the adapter works today against any European port. Full
+detail in [`docs/METHODOLOGY.md` §1a](docs/METHODOLOGY.md).
 
 ## Data sources
 
 | Source | In v1 | Cost | Role |
 |---|---|---|---|
 | [IMF PortWatch](https://portwatch.imf.org) | yes | free, keyless | Daily port calls + trade volume for ~2,065 ports; daily transit counts for 28 chokepoints. Weekly refresh (Tue). |
-| [AISStream.io](https://aisstream.io) | yes | free, free key | Live AIS, sampled: anchorage-queue counts per port, transit counts per chokepoint. Needs `LOGJAM_AISSTREAM_API_KEY`. |
+| [AISStream.io](https://aisstream.io) | adapter built | free, free key | Sampled live AIS -> anchorage-queue + transit counts. Needs `LOGJAM_AISSTREAM_API_KEY`. **Terrestrial-only: no coverage in the Gulf / Red Sea** — use a European port, or a paid satellite-AIS feed for v1's geography. |
 | [Freightos Baltic Index](https://fbx.freightos.com) | planned | free | Lane-level container spot rates — a leading disruption signal. |
 | [GDELT](https://www.gdeltproject.org) | planned | free | Event/news context for *why* a bottleneck appeared. |
 
@@ -67,7 +79,8 @@ uv run logjam opportunities --days 30
 uv run logjam recovery --search "hormuz"    # is a known disruption still ongoing?
 uv run logjam ports --search "jebel ali"    # find PortWatch entity ids
 
-# Live AIS (needs LOGJAM_AISSTREAM_API_KEY from aisstream.io):
+# Live AIS (needs LOGJAM_AISSTREAM_API_KEY from aisstream.io).
+# Free feed = Europe / N. America only; re-point resources/ais_zones.yaml first.
 uv run logjam ais-collect --minutes 30      # sample the stream to data/ais_raw/
 uv run logjam ais-reduce                    # fold captures into the store
 uv run logjam refresh                       # then recompute baselines + signals
@@ -188,6 +201,9 @@ set covers the major trade lanes; extend it for yours.
       treat a sudden exact-zero on a high-baseline series as missing data.
 - [x] AISStream adapter: sampled anchorage-queue + chokepoint-transit counts
       (`ais-collect` / `ais-reduce`; geofences in `resources/ais_zones.yaml`).
+- [ ] AIS for v1's geography: the free AISStream feed doesn't cover the Gulf /
+      Red Sea (terrestrial-only). Needs a paid satellite-AIS source, or re-point
+      the demo at a well-covered European port.
 - [ ] AIS berth-dwell time (needs per-vessel anchorage→berth state tracking).
 - [ ] Multi-year / pre-crisis baseline option (fixed reference period) so
       `recovery` can answer "vs pre-disruption", not just "vs a year ago".

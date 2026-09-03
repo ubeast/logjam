@@ -13,7 +13,7 @@ on:
         default: false
 
 concurrency:
-  group: bottleneck-store        # don't race the AIS sampler for the DuckDB file
+  group: logjam-store        # don't race the AIS sampler for the DuckDB file
   cancel-in-progress: false
 
 jobs:
@@ -35,8 +35,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: data/logjam.duckdb
-          key: bottleneck-db-${{ github.run_id }}
-          restore-keys: bottleneck-db-
+          key: logjam-db-${{ github.run_id }}
+          restore-keys: logjam-db-
 
       - name: Refresh
         run: uv run python scripts/refresh.py ${{ inputs.full && '--full' || '' }}
