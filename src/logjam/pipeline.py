@@ -12,6 +12,8 @@ from logjam.analytics.ais_reduce import reduce_pending as reduce_ais_pending
 from logjam.analytics.baseline import compute_baselines
 from logjam.analytics.detect import detect_bottlenecks, detect_congestion
 from logjam.analytics.opportunity import detect_opportunities
+from logjam.config import settings
+from logjam.ingest.gdelt import fetch_gdelt
 from logjam.ingest.portwatch import default_since, fetch_portwatch, month_starts
 from logjam.store.db import connect, init_schema, latest_observation_date
 from logjam.store.loaders import upsert_observations
@@ -29,6 +31,7 @@ class RefreshResult:
     baseline_rows: int
     bottlenecks: int
     opportunities: int
+    gdelt_rows_written: int = 0
 
 
 def _ingest(
@@ -71,6 +74,18 @@ def refresh(
 
         written = _ingest(con, since, progress=progress)
 
+        # News-attention signal (GDELT). Off by default (the DOC API is slow);
+        # best-effort when on, so a failure never sinks the PortWatch run.
+        gdelt_rows = 0
+        if settings.gdelt_on_refresh:
+            progress("fetching GDELT news signal")
+            try:
+                gdelt_rows = upsert_observations(con, fetch_gdelt(since=since), source="gdelt")
+                if gdelt_rows:
+                    progress(f"  {gdelt_rows:,} GDELT observation rows")
+            except Exception as exc:  # noqa: BLE001 - non-critical source, keep going
+                progress(f"  GDELT skipped: {type(exc).__name__}: {exc}")
+
         # Fold in any AIS captures that have not been reduced yet. No-op unless
         # the AISStream sampler (`logjam ais-collect`) has been run.
         progress("reducing AIS captures")
@@ -92,6 +107,7 @@ def refresh(
             baseline_rows=baseline_rows,
             bottlenecks=bottlenecks,
             opportunities=opportunities,
+            gdelt_rows_written=gdelt_rows,
         )
     finally:
         con.close()

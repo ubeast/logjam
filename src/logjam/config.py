@@ -37,6 +37,19 @@ class Settings(BaseSettings):
     arcgis_page_size: int = 5000
     http_timeout_s: float = 60.0
 
+    # --- GDELT (news-attention signal) -----------------------------------
+    # DOC 2.0 API: free, no key, but rate-limits hard (HTTP 429) and only serves
+    # ~the last 3 months, so this is a collect-forward source - each refresh
+    # pulls the trailing window and the store keeps history past the API window.
+    gdelt_doc_url: str = "https://api.gdeltproject.org/api/v2/doc/doc"
+    gdelt_request_pause_s: float = 1.5   # space out calls; the API 429s aggressively
+    gdelt_timeout_s: float = 90.0        # the DOC API is often very slow (10-60s/call)
+    gdelt_max_lookback_days: int = 89    # DOC 2.0 only answers for roughly the last 3 months
+    # The DOC API is slow enough that folding ~20 calls into every `refresh` can
+    # add minutes. Off by default; run `logjam news-fetch` (or its own CI cron)
+    # instead, or set LOGJAM_GDELT_ON_REFRESH=true to include it.
+    gdelt_on_refresh: bool = False
+
     # --- Backfill window ---------------------------------------------------
     # On an empty database, how many days of history to pull. PortWatch has
     # data back to ~2019; a few years is plenty to establish seasonal baselines
@@ -101,6 +114,10 @@ class Settings(BaseSettings):
     @property
     def ais_zones_path(self) -> Path:
         return self.resources_dir / "ais_zones.yaml"
+
+    @property
+    def gdelt_queries_path(self) -> Path:
+        return self.resources_dir / "gdelt_queries.yaml"
 
     @property
     def geo_dir(self) -> Path:

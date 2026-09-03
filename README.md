@@ -53,8 +53,9 @@ detail in [`docs/METHODOLOGY.md` §1a](docs/METHODOLOGY.md).
 |---|---|---|---|
 | [IMF PortWatch](https://portwatch.imf.org) | yes | free, keyless | Daily port calls + trade volume for ~2,065 ports; daily transit counts for 28 chokepoints. Weekly refresh (Tue). |
 | [AISStream.io](https://aisstream.io) | adapter built | free, free key | Sampled live AIS -> anchorage-queue + transit counts. Needs `LOGJAM_AISSTREAM_API_KEY`. **Terrestrial-only: no coverage in the Gulf / Red Sea** — use a European port, or a paid satellite-AIS feed for v1's geography. |
-| [Freightos Baltic Index](https://fbx.freightos.com) | planned | free | Lane-level container spot rates — a leading disruption signal. |
-| [GDELT](https://www.gdeltproject.org) | planned | free | Event/news context for *why* a bottleneck appeared. |
+| [GDELT](https://www.gdeltproject.org) | yes | free, keyless | News-attention per chokepoint (`gdelt_volume` / `gdelt_tone`) — the *why* behind a throughput drop, and often a few days ahead of it. DOC 2.0 API is slow (10–60 s/call) and 90-day window, so it runs as its own step (`logjam news-fetch`), not on every refresh. |
+| [Freightos Baltic Index](https://fbx.freightos.com) | dropped | not free | Container spot rates would be a great leading signal, but FBX needs a paid subscription — no API. Revisit if a free rate feed appears. |
+| Canal authorities (Suez, Panama) | planned | free | Official transit stats + draft-restriction notices — ground-truth cross-check on chokepoint counts. |
 
 Attribution: port and chokepoint activity data © IMF PortWatch, used under its
 free public-use terms.
@@ -78,6 +79,11 @@ uv run logjam bottlenecks --days 30
 uv run logjam opportunities --days 30
 uv run logjam recovery --search "hormuz"    # is a known disruption still ongoing?
 uv run logjam ports --search "jebel ali"    # find PortWatch entity ids
+
+# News-attention signal (GDELT, free, no key). Its own step - the API is slow.
+uv run logjam news-fetch                    # pull the 90-day window into the store
+uv run logjam refresh                       # recompute baselines over it
+uv run logjam news --search "hormuz"        # volume/tone vs the trailing norm
 
 # Live AIS (needs LOGJAM_AISSTREAM_API_KEY from aisstream.io).
 # Free feed = Europe / N. America only; re-point resources/ais_zones.yaml first.
@@ -114,6 +120,7 @@ src/logjam/
 ├── ingest/
 │   ├── arcgis.py                 generic paged ArcGIS FeatureServer client
 │   ├── portwatch.py              PortWatch adapter -> tidy long frame
+│   ├── gdelt.py                  GDELT DOC 2.0 -> daily news volume/tone per chokepoint
 │   ├── aisstream.py              AISStream sampler -> raw Parquet captures
 │   └── ais_zones.py              geofences (port circles + chokepoint boxes)
 ├── store/
@@ -128,6 +135,7 @@ src/logjam/
 ├── resources/
 │   ├── substitution_groups.yaml  editable port clusters
 │   ├── ais_zones.yaml            AIS subscription regions + port watchlist
+│   ├── gdelt_queries.yaml        GDELT query string per tracked chokepoint
 │   └── geo/                      PortWatch coordinates + the briefs' basemap
 ├── pipeline.py                   refresh() = the whole chain (incl. AIS reduce)
 └── cli.py                        `logjam` command
@@ -207,7 +215,11 @@ set covers the major trade lanes; extend it for yours.
 - [ ] AIS berth-dwell time (needs per-vessel anchorage→berth state tracking).
 - [ ] Multi-year / pre-crisis baseline option (fixed reference period) so
       `recovery` can answer "vs pre-disruption", not just "vs a year ago".
-- [ ] Freightos + GDELT adapters.
+- [x] GDELT news-attention adapter (`news-fetch` / `news`; `gdelt_volume` /
+      `gdelt_tone` per chokepoint).
+- [ ] Cross-reference the GDELT signal onto bottleneck signals (news spike near a
+      chokepoint whose transits also dropped -> higher-confidence "why").
+- [ ] Canal-authority adapters (Suez, Panama) — free official transit stats.
 - [ ] FastAPI read layer over `signal` / `baseline`.
 - [ ] Alerting (webhook / email) on new high-severity signals.
 - [ ] Backtest harness against known events (2021 Suez, 2024–26 Red Sea/Hormuz).

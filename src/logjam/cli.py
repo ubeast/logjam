@@ -3,6 +3,8 @@
     logjam refresh [--full]         pull data + recompute everything
     logjam bottlenecks [--days 14]  list recent bottleneck signals
     logjam opportunities [--days 14] list recent reroute opportunities
+    logjam recovery -s "hormuz"     ongoing or recovered vs a year ago
+    logjam news -s "hormuz"         GDELT news-attention vs the trailing norm
     logjam ports --search "long beach"   look up PortWatch port ids
     logjam status                   what's in the local database
     logjam ais-collect [--minutes 30]   sample the live AIS stream
@@ -34,7 +36,8 @@ def refresh(
     res = run_refresh(full_backfill=full, progress=lambda m: console.log(m))
     console.print(
         f"[green]Done.[/green] since={res.since}  observations={res.observations_written:,}  "
-        f"ais_rows={res.ais_rows_written:,}  baseline_rows={res.baseline_rows:,}  "
+        f"ais_rows={res.ais_rows_written:,}  gdelt_rows={res.gdelt_rows_written:,}  "
+        f"baseline_rows={res.baseline_rows:,}  "
         f"bottlenecks={res.bottlenecks:,}  opportunities={res.opportunities:,}"
     )
 
@@ -195,6 +198,92 @@ def recovery(
     console.print(
         "[dim]% of normal = today's value / median around the same date ~1 year "
         "earlier. 'trend' compares with ~4 weeks ago.[/dim]"
+    )
+
+
+@app.command("news-fetch")
+def news_fetch() -> None:
+    """Pull the GDELT news-attention window into the store (its own step - the API is slow).
+
+    Then run `logjam refresh` to fold it into the baselines. Configure which
+    chokepoints are tracked in `resources/gdelt_queries.yaml`.
+    """
+    from logjam.ingest.gdelt import fetch_gdelt  # noqa: PLC0415
+    from logjam.store.loaders import upsert_observations  # noqa: PLC0415
+
+    con = connect()
+    try:
+        init_schema(con)
+        console.log("fetching GDELT news window (the DOC API is slow - allow a few minutes)")
+        try:
+            tidy = fetch_gdelt()
+        except RuntimeError as exc:
+            console.print(f"[red]GDELT unavailable:[/red] {exc}")
+            raise typer.Exit(1) from exc
+        written = upsert_observations(con, tidy, source="gdelt")
+    finally:
+        con.close()
+    console.print(f"[green]Fetched[/green] {written:,} GDELT observation rows.")
+    console.print(
+        "Run [bold]logjam refresh[/bold] to recompute baselines, then `logjam news -s <name>`."
+    )
+
+
+@app.command()
+def news(
+    search: str = typer.Option(
+        ..., "--search", "-s", help="Substring of the chokepoint name."
+    ),
+    days: int = typer.Option(21, "--days", help="How many recent days to show."),
+) -> None:
+    """GDELT news-attention for a chokepoint: recent volume/tone vs the trailing norm.
+
+    Context for a throughput signal - a spike in `gdelt_volume` (share of world
+    coverage) or a slump in `gdelt_tone` around a chokepoint is what "why" looks
+    like. Example: `logjam news -s hormuz`
+    """
+    cutoff = dt.date.today() - dt.timedelta(days=days)
+    con = connect(read_only=True)
+    try:
+        rows = con.execute(
+            """
+            SELECT b.obs_date, o.entity_name, b.metric, b.value, b.expected, b.robust_z
+            FROM baseline b
+            JOIN (SELECT entity_type, entity_id, any_value(entity_name) AS entity_name
+                  FROM observation GROUP BY entity_type, entity_id) o USING (entity_type, entity_id)
+            WHERE b.metric IN ('gdelt_volume', 'gdelt_tone')
+              AND b.obs_date >= ?
+              AND lower(o.entity_name) LIKE lower(?)
+            ORDER BY b.obs_date DESC, b.metric
+            """,
+            [cutoff, f"%{search}%"],
+        ).fetchall()
+    finally:
+        con.close()
+
+    if not rows:
+        console.print(
+            f'No GDELT baseline rows match "{search}" in the last {days}d. '
+            "Run `logjam refresh`, and check `resources/gdelt_queries.yaml`."
+        )
+        return
+
+    table = Table(title=f'News attention: "{search}" (last {days}d)')
+    for col in ("date", "chokepoint", "metric", "value", "expected", "z"):
+        table.add_column(col)
+    for (d, name, metric, val, exp, z) in rows:
+        colour = "red" if (metric == "gdelt_volume" and z >= 2) or (
+            metric == "gdelt_tone" and z <= -2
+        ) else "white"
+        table.add_row(
+            str(d), name or "?", metric,
+            f"[{colour}]{val:,.2f}[/]", f"{exp:,.2f}", f"{z:+.1f}",
+        )
+    console.print(table)
+    console.print(
+        "[dim]gdelt_volume = per-mille of GDELT's daily articles mentioning the "
+        "chokepoint; gdelt_tone = mean sentiment (-=negative). z is vs the "
+        f"{settings.baseline_window_days}-day trailing median.[/dim]"
     )
 
 

@@ -1,0 +1,23 @@
+# GDELT DOC 2.0 query per chokepoint, for the news-attention signal
+# (see ingest/gdelt.py). Only chokepoints listed here are tracked.
+#
+# `query` is a GDELT DOC query string: phrases in double quotes, OR-groups in
+# parentheses. Keep it specific - a bare "Suez" also matches Suez County, Ohio.
+# Test a query at:
+#   https://api.gdeltproject.org/api/v2/doc/doc?query=<q>&mode=timelinevolraw&format=json
+#
+# entity_id is the PortWatch chokepoint id (resources/geo/portwatch_places.json),
+# so the rows join straight onto the throughput analysis for the same chokepoint.
+
+chokepoints:
+  chokepoint1:  '"Suez Canal"'
+  chokepoint2:  '"Panama Canal"'
+  chokepoint3:  '("Bosphorus Strait" OR "Bosporus Strait" OR "Turkish Straits")'
+  chokepoint4:  '("Bab el-Mandeb" OR "Bab al-Mandab" OR "Bab-el-Mandeb")'
+  chokepoint5:  '("Strait of Malacca" OR "Malacca Strait")'
+  chokepoint6:  '("Strait of Hormuz" OR "Hormuz Strait")'
+  chokepoint7:  '"Cape of Good Hope" shipping'
+  chokepoint8:  '("Strait of Gibraltar" OR "Gibraltar Strait")'
+  chokepoint9:  '("Dover Strait" OR "Strait of Dover")'
+  chokepoint11: '"Taiwan Strait"'
+  chokepoint28: '"Kerch Strait"'

@@ -10,12 +10,13 @@ Repository: <https://github.com/ubeast/logjam>
 
 ## 1. Data source
 
-Every figure the tool produces today comes from
+The throughput figures the tool produces come from
 **[IMF PortWatch](https://portwatch.imf.org)**, a free public platform run by the
-IMF with the UN Global Platform. (A second source, AISStream, has a working
-adapter but the free feed does not cover v1's geography — §1a.) PortWatch
-estimates daily maritime activity from satellite AIS (Automatic Identification
-System) signals on ~90,000 ships, published as two ArcGIS feature layers:
+IMF with the UN Global Platform. A free news-attention layer (GDELT, §1b) adds
+the *why*; a fourth source, AISStream, has a working adapter but the free feed
+does not cover v1's geography (§1a). PortWatch estimates daily maritime activity
+from satellite AIS (Automatic Identification System) signals on ~90,000 ships,
+published as two ArcGIS feature layers:
 
 | Layer | Grain | Fields used |
 |---|---|---|
@@ -93,6 +94,33 @@ measures it directly; `ais_transiting` is a rate proxy and a same-day
 cross-check on PortWatch's `n_total` (which lags a week and reads exact-zero on
 missing data).
 
+### 1b. News attention (GDELT)
+
+PortWatch tells you a chokepoint's transits fell; it can't tell you *why*.
+**[GDELT](https://www.gdeltproject.org)** monitors world news in 100+ languages
+in near-real time and its DOC 2.0 API is free and keyless. For each chokepoint
+listed in `resources/gdelt_queries.yaml`, the adapter pulls two daily series:
+
+| Metric | Definition |
+|---|---|
+| `gdelt_volume` | articles mentioning the chokepoint that day as a **per-mille share of GDELT's total monitored articles** — normalised so the steady growth of GDELT's own corpus is not read as a trend. A spike = a surge of attention, which for a shipping chokepoint is almost always a disruption. |
+| `gdelt_tone` | mean sentiment of that coverage on GDELT's tone scale (roughly −10…+10; negative = negative coverage). |
+
+Rows are keyed by the **PortWatch chokepoint id**, so they sit in the
+`observation` table right beside that chokepoint's transit counts and get the
+same trailing baseline.
+
+**Limitations.** (1) The DOC API only serves ~the last three months, so this is
+a *collect-forward* source — `logjam news-fetch` pulls the trailing window and
+the store keeps history past what the API still returns. (2) The API is slow
+(10–60 s per call) and rate-limits hard; the adapter tolerates partial failure
+and it is not run on every `refresh` (`gdelt_on_refresh`, default off).
+(3) Attention is a *coincident-to-leading* proxy, not a flow measurement — it is
+context for a throughput signal, and is **not** turned into a bottleneck signal
+of its own (surfaced via `logjam news`, cross-referencing is on the roadmap).
+(4) Query quality matters — a bare `"Suez"` also matches Suez, Ohio; the
+resource file uses specific phrases.
+
 ---
 
 ## 2. Pipeline
@@ -101,6 +129,9 @@ missing data).
 ingest (PortWatch ArcGIS, paged)                  ingest/portwatch.py
   -> tidy long frame: entity | date | metric | value
   -> DuckDB `observation` table (idempotent upsert)  store/
+
+fetch (GDELT DOC 2.0 timeline, per chokepoint)    ingest/gdelt.py
+  -> daily gdelt_volume / gdelt_tone -> same `observation` table (source 'gdelt')
 
 sample (AISStream WebSocket, time-boxed)          ingest/aisstream.py
   -> raw Parquet captures under data/ais_raw/
