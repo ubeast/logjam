@@ -1,0 +1,555 @@
+{
+  "meta": {
+    "generated": "2026-09-16T00:48:04+00:00",
+    "data_source": "src/logjam/resources/carrier_routes.yaml (carrier network publications, fetched Sep 2026)",
+    "basemap": "corridor"
+  },
+  "services": [
+    {
+      "carrier": "Maersk",
+      "service": "AE1",
+      "route_type": "Cape of Good Hope",
+      "source": "maersk.com Asia-Europe network update, Feb/Apr 2026",
+      "calls": [
+        "Shanghai",
+        "Yantian",
+        "Tanjung Pelepas",
+        "Rotterdam",
+        "Hamburg",
+        "Antwerp",
+        "London Gateway",
+        "Tangier",
+        "Singapore"
+      ],
+      "has_published_transit_times": false
+    },
+    {
+      "carrier": "Maersk",
+      "service": "AE2",
+      "route_type": "Cape of Good Hope",
+      "source": "maersk.com Asia-Europe network update, Feb/Apr 2026",
+      "calls": [
+        "Ningbo",
+        "Shanghai",
+        "Tanjung Pelepas",
+        "Tangier",
+        "Wilhelmshaven",
+        "Bremerhaven",
+        "Rotterdam",
+        "Salalah",
+        "Singapore"
+      ],
+      "has_published_transit_times": false
+    },
+    {
+      "carrier": "Maersk",
+      "service": "AE3",
+      "route_type": "Cape of Good Hope",
+      "source": "maersk.com Asia-Europe network update, Feb/Apr 2026",
+      "calls": [
+        "Shanghai",
+        "Yantian",
+        "Tanjung Pelepas",
+        "London Gateway",
+        "Aarhus",
+        "Gothenburg",
+        "Rotterdam",
+        "Southampton",
+        "Singapore"
+      ],
+      "has_published_transit_times": false
+    },
+    {
+      "carrier": "Maersk",
+      "service": "AE5",
+      "route_type": "Cape of Good Hope",
+      "source": "maersk.com Asia-Europe network update, Feb/Apr 2026",
+      "calls": [
+        "Qingdao",
+        "Ningbo",
+        "Tanjung Pelepas",
+        "London Gateway",
+        "Bremerhaven",
+        "Hamburg",
+        "Rotterdam",
+        "Algeciras",
+        "Tanjung Pelepas"
+      ],
+      "has_published_transit_times": false
+    },
+    {
+      "carrier": "Maersk",
+      "service": "AE11",
+      "route_type": "Cape of Good Hope",
+      "source": "maersk.com Asia-Europe network update, Feb/Apr 2026",
+      "calls": [
+        "Shanghai",
+        "Yantian",
+        "Tanjung Pelepas",
+        "Tangier",
+        "Valencia",
+        "Barcelona",
+        "La Spezia",
+        "Genoa",
+        "Vado Ligure",
+        "Singapore"
+      ],
+      "has_published_transit_times": false
+    },
+    {
+      "carrier": "Maersk",
+      "service": "AE12",
+      "route_type": "Suez Canal",
+      "source": "maersk.com Asia-Europe network update, Feb/Apr 2026",
+      "calls": [
+        "Ningbo",
+        "Shanghai",
+        "Tanjung Pelepas",
+        "Algeciras",
+        "Koper",
+        "Rijeka",
+        "Algeciras",
+        "Singapore"
+      ],
+      "has_published_transit_times": false
+    },
+    {
+      "carrier": "Maersk",
+      "service": "AE15",
+      "route_type": "Suez Canal",
+      "source": "maersk.com Asia-Europe network update, Feb/Apr 2026",
+      "calls": [
+        "Qingdao",
+        "Gwangyang",
+        "Ningbo",
+        "Tanjung Pelepas",
+        "Port Said",
+        "Damietta",
+        "Colombo",
+        "Singapore"
+      ],
+      "has_published_transit_times": false
+    },
+    {
+      "carrier": "CMA CGM",
+      "service": "MEDEX",
+      "route_type": "Suez Canal",
+      "source": "CMA CGM MEDEX flyer, April 2026 (official, non-contractual transit times)",
+      "calls": [
+        "Fos",
+        "Valencia",
+        "Genoa",
+        "Malta",
+        "Piraeus",
+        "Port Said",
+        "Jeddah",
+        "Djibouti",
+        "Mundra",
+        "Nhava Sheva",
+        "Hazira",
+        "Colombo",
+        "Karachi",
+        "Port Qasim",
+        "Mangalore"
+      ],
+      "has_published_transit_times": true
+    },
+    {
+      "carrier": "CMA CGM",
+      "service": "BIGEX 1",
+      "route_type": "Gulf (intra-regional, no Suez/Cape transit)",
+      "source": "CMA CGM BIGEX 1 flyer PDF",
+      "calls": [
+        "Nhava Sheva",
+        "Mundra",
+        "Jebel Ali",
+        "Khalifa Port",
+        "Umm Qasr",
+        "Karachi",
+        "Shuaiba",
+        "Jubail"
+      ],
+      "has_published_transit_times": false
+    }
+  ],
+  "carrier_map": {
+    "bbox": [
+      -8.0,
+      5.0,
+      82.0,
+      42.0
+    ],
+    "points": [
+      {
+        "name": "Tangier",
+        "lon": -5.4,
+        "lat": 35.88,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Salalah",
+        "lon": 54.02,
+        "lat": 16.95,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Algeciras",
+        "lon": -5.45,
+        "lat": 36.13,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Valencia",
+        "lon": -0.32,
+        "lat": 39.44,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Barcelona",
+        "lon": 2.17,
+        "lat": 41.35,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Port Said",
+        "lon": 32.3,
+        "lat": 31.26,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Damietta",
+        "lon": 31.82,
+        "lat": 31.42,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Colombo",
+        "lon": 79.85,
+        "lat": 6.95,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Malta",
+        "lon": 14.54,
+        "lat": 35.82,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Piraeus",
+        "lon": 23.6,
+        "lat": 37.95,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Jeddah",
+        "lon": 39.17,
+        "lat": 21.49,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Djibouti",
+        "lon": 43.15,
+        "lat": 11.6,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Mundra",
+        "lon": 69.72,
+        "lat": 22.84,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Nhava Sheva",
+        "lon": 72.95,
+        "lat": 18.95,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Hazira",
+        "lon": 72.65,
+        "lat": 21.1,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Karachi",
+        "lon": 67.01,
+        "lat": 24.85,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Port Qasim",
+        "lon": 67.35,
+        "lat": 24.75,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Mangalore",
+        "lon": 74.8,
+        "lat": 12.92,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Jebel Ali",
+        "lon": 55.02,
+        "lat": 25.01,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Khalifa Port",
+        "lon": 54.65,
+        "lat": 24.81,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Umm Qasr",
+        "lon": 47.93,
+        "lat": 30.03,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Shuaiba",
+        "lon": 48.15,
+        "lat": 29.03,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      },
+      {
+        "name": "Jubail",
+        "lon": 49.66,
+        "lat": 27.02,
+        "delta": 0.0,
+        "pct": null,
+        "role": "waypoint"
+      }
+    ],
+    "routes": [
+      {
+        "name": "Maersk AE2",
+        "color": "#d95926",
+        "legs": [
+          [
+            -5.4,
+            35.88
+          ],
+          [
+            54.02,
+            16.95
+          ]
+        ]
+      },
+      {
+        "name": "Maersk AE11",
+        "color": "#c0392b",
+        "legs": [
+          [
+            -5.4,
+            35.88
+          ],
+          [
+            -0.32,
+            39.44
+          ],
+          [
+            2.17,
+            41.35
+          ]
+        ]
+      },
+      {
+        "name": "Maersk AE12",
+        "color": "#16a085",
+        "legs": [
+          [
+            -5.45,
+            36.13
+          ],
+          [
+            -5.45,
+            36.13
+          ]
+        ]
+      },
+      {
+        "name": "Maersk AE15",
+        "color": "#e67e22",
+        "legs": [
+          [
+            32.3,
+            31.26
+          ],
+          [
+            31.82,
+            31.42
+          ],
+          [
+            79.85,
+            6.95
+          ]
+        ]
+      },
+      {
+        "name": "CMA CGM MEDEX",
+        "color": "#2c3e50",
+        "legs": [
+          [
+            -0.32,
+            39.44
+          ],
+          [
+            14.54,
+            35.82
+          ],
+          [
+            23.6,
+            37.95
+          ],
+          [
+            32.3,
+            31.26
+          ],
+          [
+            39.17,
+            21.49
+          ],
+          [
+            43.15,
+            11.6
+          ],
+          [
+            69.72,
+            22.84
+          ],
+          [
+            72.95,
+            18.95
+          ],
+          [
+            72.65,
+            21.1
+          ],
+          [
+            79.85,
+            6.95
+          ],
+          [
+            67.01,
+            24.85
+          ],
+          [
+            67.35,
+            24.75
+          ],
+          [
+            74.8,
+            12.92
+          ]
+        ]
+      },
+      {
+        "name": "CMA CGM BIGEX 1",
+        "color": "#f39c12",
+        "legs": [
+          [
+            72.95,
+            18.95
+          ],
+          [
+            69.72,
+            22.84
+          ],
+          [
+            55.02,
+            25.01
+          ],
+          [
+            54.65,
+            24.81
+          ],
+          [
+            47.93,
+            30.03
+          ],
+          [
+            67.01,
+            24.85
+          ],
+          [
+            48.15,
+            29.03
+          ],
+          [
+            49.66,
+            27.02
+          ]
+        ]
+      }
+    ],
+    "dropped_ports": [
+      "Aarhus",
+      "Antwerp",
+      "Bremerhaven",
+      "Fos",
+      "Genoa",
+      "Gothenburg",
+      "Gwangyang",
+      "Hamburg",
+      "Koper",
+      "La Spezia",
+      "London Gateway",
+      "Ningbo",
+      "Qingdao",
+      "Rijeka",
+      "Rotterdam",
+      "Shanghai",
+      "Singapore",
+      "Southampton",
+      "Tanjung Pelepas",
+      "Vado Ligure",
+      "Wilhelmshaven",
+      "Yantian"
+    ]
+  }
+}

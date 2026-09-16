@@ -121,6 +121,10 @@ class Settings(BaseSettings):
         return self.resources_dir / "gdelt_queries.yaml"
 
     @property
+    def carrier_routes_path(self) -> Path:
+        return self.resources_dir / "carrier_routes.yaml"
+
+    @property
     def geo_dir(self) -> Path:
         """Static geographic assets: PortWatch coordinates + the brief basemap."""
         return self.resources_dir / "geo"

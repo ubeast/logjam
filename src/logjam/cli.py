@@ -9,6 +9,7 @@
     logjam status                   what's in the local database
     logjam ais-collect [--minutes 30]   sample the live AIS stream
     logjam ais-reduce [--all]       fold AIS captures into the store
+    logjam carrier-route <origin> <destination>   compare named carrier services
 """
 
 from __future__ import annotations
@@ -284,6 +285,67 @@ def news(
         "[dim]gdelt_volume = per-mille of GDELT's daily articles mentioning the "
         "chokepoint; gdelt_tone = mean sentiment (-=negative). z is vs the "
         f"{settings.baseline_window_days}-day trailing median.[/dim]"
+    )
+
+
+@app.command("carrier-route")
+def carrier_route(
+    origin: str = typer.Argument(..., help="Origin port name (substring match)."),
+    destination: str = typer.Argument(..., help="Destination port name (substring match)."),
+) -> None:
+    """Compare named carrier services between two ports: stops and transit time.
+
+    Reads the small, hand-curated seed set in
+    ``resources/carrier_routes.yaml`` (real published rotations - see
+    docs/METHODOLOGY.md). Ranks fastest first; a real carrier-published
+    transit time is marked "published", everything else is a distance/speed
+    estimate marked "est." - the two are never blended without saying so.
+
+    Example: `logjam carrier-route "Djibouti" "Piraeus"`
+    """
+    from logjam.analytics.carrier_routes import (  # noqa: PLC0415
+        DEFAULT_SPEED_KN,
+        find_routes,
+        load_ports,
+        load_services,
+    )
+
+    services = load_services()
+    ports = load_ports()
+    matches = find_routes(origin, destination, services, ports)
+
+    if not matches:
+        console.print(
+            f'No modeled service connects "{origin}" -> "{destination}" in that sailing '
+            f"direction. This is a small seed set ({len(services)} services) illustrating "
+            "real published rotations, not an exhaustive carrier database - try the "
+            "reverse pair, or see `resources/carrier_routes.yaml` to add more services."
+        )
+        return
+
+    table = Table(title=f'Carrier services: "{origin}" -> "{destination}"')
+    for col in ("carrier", "service", "route", "stops between", "transit", "calls"):
+        table.add_column(col)
+    for m in matches:
+        route = f"{m.origin_call} -> {m.destination_call}"
+        stops = "direct" if m.direct else f"{m.stops_between} stop(s)"
+        if m.transit_days is None:
+            transit = "n/a"
+        elif m.transit_estimated:
+            transit = f"~{m.transit_days}d (est.)"
+        else:
+            transit = f"{m.transit_days}d (published)"
+        table.add_row(
+            m.service.carrier, m.service.service, route, stops, transit,
+            f"[dim]{m.service.operator_note}[/dim]",
+        )
+    console.print(table)
+    console.print(
+        "[dim]'published' = the carrier's own transit-time matrix; 'est.' = great-circle "
+        f"distance along the sailed path / {DEFAULT_SPEED_KN:.0f}kn, steaming time only "
+        "(excludes port dwell, so it under-states real multi-stop transits). This is one "
+        "sailing direction only - the reverse pair can match the same service with a "
+        "different stop count and transit time, not a mirrored one.[/dim]"
     )
 
 

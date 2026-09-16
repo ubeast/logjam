@@ -202,9 +202,17 @@ class MapChart:
     :mod:`_geo`. ``bbox`` is ``[minlon, minlat, maxlon, maxlat]`` and drives a
     Web-Mercator projection in the browser. Each point:
         {name, lon, lat, delta, pct, role, country?}
-    ``role`` is ``"gain"`` | ``"loss"`` | ``"chokepoint"``; ``delta`` is the
-    signed absolute change and sizes the bubble, ``pct`` the percent change;
-    ``country`` (optional) is the port's country, shown in the tooltip.
+    ``role`` is ``"gain"`` | ``"loss"`` | ``"chokepoint"`` | ``"waypoint"``;
+    ``delta`` is the signed absolute change and sizes the bubble (ignored for
+    ``"waypoint"``, which draws a small neutral dot with no change stats -
+    for maps that are a plain location index, not a gain/loss read), ``pct``
+    the percent change; ``country`` (optional) is the port's country, shown
+    in the tooltip; ``source``/``window`` (optional) are shown as an extra
+    tooltip line, for a map merging points from more than one source with
+    different baselines.
+
+    ``routes`` (optional) draws named polylines under the point bubbles -
+    e.g. a carrier's port rotation - as ``{name, color, legs: [[lon,lat],...]}``.
     """
 
     chart_id: str
@@ -217,6 +225,7 @@ class MapChart:
     size_unit: str = ""            # e.g. "container calls/day"
     size_legend: list[float] = field(default_factory=list)  # |delta| values for the size key
     labels: list[str] = field(default_factory=list)         # point names to always label
+    routes: list[dict[str, Any]] = field(default_factory=list)  # {name, color, legs}
 
 
 @dataclass
@@ -415,6 +424,7 @@ def _chart_to_json(c: Any) -> dict[str, Any]:
             "sizeUnit": c.size_unit,
             "sizeLegend": c.size_legend,
             "labels": c.labels,
+            "routes": c.routes,
         }
     if isinstance(c, CapacityChart):
         return {
@@ -1317,6 +1327,29 @@ CHART_JS = r"""
     draw(opts.borders, "map-border");
     svg.appendChild(el("rect", { x: m.l, y: m.t, width: pw, height: ph, fill: "none", stroke: "var(--map-coast)", "stroke-width": "1" }));
 
+    // Named route overlays (e.g. a carrier's port rotation), drawn under the
+    // point bubbles so those stay readable on top.
+    (opts.routes || []).forEach(function (rt) {
+      var d = (rt.legs || []).map(function (c, i) {
+        return (i ? "L" : "M") + X(c[0]).toFixed(1) + " " + Y(c[1]).toFixed(1);
+      }).join(" ");
+      if (!d) return;
+      g.appendChild(el("path", {
+        d: d, class: "map-route", fill: "none",
+        stroke: rt.color || "var(--s1)", "stroke-width": "1.6", "stroke-opacity": "0.85",
+      }));
+    });
+    if (opts.routes && opts.routes.length) {
+      var rlG = el("g"), rly = m.t + 14;
+      opts.routes.forEach(function (rt) {
+        rlG.appendChild(el("line", { x1: m.l + pw - 150, y1: rly, x2: m.l + pw - 128, y2: rly,
+          stroke: rt.color || "var(--s1)", "stroke-width": "2.5" }));
+        rlG.appendChild(txt(rt.name, m.l + pw - 122, rly + 3.5, "start", "map-key-txt"));
+        rly += 14;
+      });
+      svg.appendChild(rlG);
+    }
+
     var rMax = 20, rMin = 3;
     function radius(v) {
       if (!opts.sizeMax) return rMin;
@@ -1336,6 +1369,8 @@ CHART_JS = r"""
         var s = 8;
         svg.appendChild(el("path", { class: "map-choke",
           d: "M" + cx + " " + (cy - s) + " L" + (cx + s) + " " + cy + " L" + cx + " " + (cy + s) + " L" + (cx - s) + " " + cy + " Z" }));
+      } else if (p.role === "waypoint") {
+        svg.appendChild(el("circle", { class: "map-bubble", cx: cx, cy: cy, r: 4, fill: "var(--ink-2)", stroke: "var(--ink-2)" }));
       } else {
         var col = p.role === "gain" ? "var(--pos)" : "var(--neg)";
         svg.appendChild(el("circle", { class: "map-bubble", cx: cx, cy: cy, r: radius(p.delta), fill: col, stroke: col }));
@@ -1347,6 +1382,8 @@ CHART_JS = r"""
         var rows = p.role === "chokepoint"
           ? '<div class="tt-row">Container transits: <b>' + ps
             + (p.pct == null ? '' : ' of pre-crisis change') + '</b></div>'
+          : p.role === "waypoint"
+          ? ""
           : '<div class="tt-row">Container calls: <b>' + ps + '</b></div>' +
             '<div class="tt-row">Change: <b>' + (p.delta >= 0 ? "+" : "") + fmt(p.delta) + " " + (opts.sizeUnit || "") + '</b></div>';
         if (p.source) {
@@ -1364,7 +1401,7 @@ CHART_JS = r"""
     pts.forEach(function (p) {
       if (!labelSet[p.name]) return;
       var cx = X(p.lon), cy = Y(p.lat);
-      var r = p.role === "chokepoint" ? 8 : radius(p.delta);
+      var r = p.role === "chokepoint" ? 8 : radius(p.delta || 0);
       var left = p.labelSide === "left";
       var labelText = p.name + (p.country ? " (" + p.country + ")" : "");
       var t = txt(labelText, cx + (left ? -(r + 5) : r + 5), cy + 3.5 + (p.labelDy || 0),

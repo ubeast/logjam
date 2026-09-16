@@ -1,0 +1,349 @@
+# Carrier route reference: a small, hand-curated seed set of REAL, currently
+# published named container-service rotations. This is illustrative, not an
+# exhaustive model of global container shipping - add more services following
+# the same shape. Every service below was fetched from the carrier's own
+# published materials in September 2026; see each service's `source` field.
+#
+# ports:
+#   Approximate port-city coordinates [lon, lat], looked up independently -
+#   NOT sourced from PortWatch (most of these ports, e.g. Fos, Tanjung
+#   Pelepas, Shanghai, don't resolve against the PortWatch `observation`
+#   table the rest of this tool uses, so this file is self-contained).
+#
+# services[].calls:
+#   The service's own published port-rotation ORDER, single pass (used for
+#   "how many stops between A and B" / direct-vs-bus-stop comparisons).
+#   `transship: true` means the vessel itself doesn't call there - cargo
+#   reaches it via a feeder from the nearest preceding direct call, per the
+#   carrier's own published network diagram. This is deliberately the
+#   *simplified* rotation, not necessarily the exact physical port sequence -
+#   see the note on transit_days below.
+#
+# services[].transit_days:
+#   Real, carrier-published, non-contractual transit times in days, keyed
+#   "From -> To" for whichever specific port pairs the carrier's own flyer
+#   gives a number for. Only CMA CGM MEDEX publishes this (April 2026 flyer,
+#   PDF, read directly). These are the carrier's own booking-tool numbers and
+#   are NOT required to arithmetically reconcile with the simplified `calls`
+#   rotation order above - CMA CGM's flyer shows MEDEX as a pendulum/butterfly
+#   string that calls some ports (Djibouti, Jeddah) more than once per loop,
+#   which the simplified single-pass `calls` list above does not attempt to
+#   reconstruct. Where the flyer's own matrix distinguished two visits to the
+#   same port ("Djibouti (2nd pass)") we kept only the first, lower figure -
+#   the second can't be represented as a distinct dict key without a fake
+#   port name, and inventing one felt worse than dropping one data point.
+#   Services with no published matrix (Maersk AE-series, CMA CGM BIGEX 1) get
+#   an empty transit_days - never a guessed number at this data layer. A
+#   distance/speed ESTIMATE is computed downstream (analytics/carrier_routes.py)
+#   only when nothing published is available, and is always labeled as such.
+
+ports:
+  Shanghai: [121.47, 31.23]
+  Yantian: [114.27, 22.57]
+  Tanjung Pelepas: [103.55, 1.36]
+  Rotterdam: [4.13, 51.93]
+  Hamburg: [9.97, 53.53]
+  Antwerp: [4.40, 51.23]
+  London Gateway: [0.44, 51.52]
+  Tangier: [-5.40, 35.88]
+  Singapore: [103.80, 1.27]
+  Ningbo: [121.75, 29.95]
+  Wilhelmshaven: [8.15, 53.53]
+  Bremerhaven: [8.58, 53.55]
+  Salalah: [54.02, 16.95]
+  Aarhus: [10.21, 56.15]
+  Gothenburg: [11.94, 57.71]
+  Southampton: [-1.40, 50.90]
+  Qingdao: [120.31, 36.07]
+  Algeciras: [-5.45, 36.13]
+  Valencia: [-0.32, 39.44]
+  Barcelona: [2.17, 41.35]
+  La Spezia: [9.83, 44.10]
+  Genoa: [8.93, 44.41]
+  Vado Ligure: [8.44, 44.27]
+  Koper: [13.73, 45.55]
+  Rijeka: [14.44, 45.32]
+  Gwangyang: [127.76, 34.89]
+  Port Said: [32.30, 31.26]
+  Damietta: [31.82, 31.42]
+  Colombo: [79.85, 6.95]
+  Malta: [14.54, 35.82]
+  Piraeus: [23.60, 37.95]
+  Jeddah: [39.17, 21.49]
+  Djibouti: [43.15, 11.60]
+  Mundra: [69.72, 22.84]
+  Nhava Sheva: [72.95, 18.95]
+  Hazira: [72.65, 21.10]
+  Karachi: [67.01, 24.85]
+  Port Qasim: [67.35, 24.75]
+  Mangalore: [74.80, 12.92]
+  Jebel Ali: [55.02, 25.01]
+  Khalifa Port: [54.65, 24.81]
+  Umm Qasr: [47.93, 30.03]
+  Shuaiba: [48.15, 29.03]
+  Jubail: [49.66, 27.02]
+  Fos: [4.85, 43.43]
+
+services:
+  - carrier: Maersk
+    service: AE1
+    operator_note: Gemini Cooperation Asia-Europe string
+    route_type: Cape of Good Hope
+    source: "maersk.com Asia-Europe network update, Feb/Apr 2026"
+    calls:
+      - {port: Shanghai}
+      - {port: Yantian}
+      - {port: Tanjung Pelepas}
+      - {port: Rotterdam}
+      - {port: Hamburg}
+      - {port: Antwerp}
+      - {port: London Gateway}
+      - {port: Tangier}
+      - {port: Singapore}
+    transit_days: {}
+
+  - carrier: Maersk
+    service: AE2
+    operator_note: Gemini Cooperation Asia-Europe string; calls Salalah, Oman
+    route_type: Cape of Good Hope
+    source: "maersk.com Asia-Europe network update, Feb/Apr 2026"
+    calls:
+      - {port: Ningbo}
+      - {port: Shanghai}
+      - {port: Tanjung Pelepas}
+      - {port: Tangier}
+      - {port: Wilhelmshaven}
+      - {port: Bremerhaven}
+      - {port: Rotterdam}
+      - {port: Salalah}
+      - {port: Singapore}
+    transit_days: {}
+
+  - carrier: Maersk
+    service: AE3
+    operator_note: Gemini Cooperation Asia-Europe string
+    route_type: Cape of Good Hope
+    source: "maersk.com Asia-Europe network update, Feb/Apr 2026"
+    calls:
+      - {port: Shanghai}
+      - {port: Yantian}
+      - {port: Tanjung Pelepas}
+      - {port: London Gateway}
+      - {port: Aarhus}
+      - {port: Gothenburg}
+      - {port: Rotterdam}
+      - {port: Southampton}
+      - {port: Singapore}
+    transit_days: {}
+
+  - carrier: Maersk
+    service: AE5
+    operator_note: Gemini Cooperation Asia-Europe string
+    route_type: Cape of Good Hope
+    source: "maersk.com Asia-Europe network update, Feb/Apr 2026"
+    calls:
+      - {port: Qingdao}
+      - {port: Ningbo}
+      - {port: Tanjung Pelepas}
+      - {port: London Gateway}
+      - {port: Bremerhaven}
+      - {port: Hamburg}
+      - {port: Rotterdam}
+      - {port: Algeciras}
+      - {port: Tanjung Pelepas}
+    transit_days: {}
+
+  - carrier: Maersk
+    service: AE11
+    operator_note: Gemini Cooperation Asia-Europe string
+    route_type: Cape of Good Hope
+    source: "maersk.com Asia-Europe network update, Feb/Apr 2026"
+    calls:
+      - {port: Shanghai}
+      - {port: Yantian}
+      - {port: Tanjung Pelepas}
+      - {port: Tangier}
+      - {port: Valencia}
+      - {port: Barcelona}
+      - {port: La Spezia}
+      - {port: Genoa}
+      - {port: Vado Ligure}
+      - {port: Singapore}
+    transit_days: {}
+
+  - carrier: Maersk
+    service: AE12
+    operator_note: Gemini Cooperation Asia-Mediterranean-Europe string; Suez re-implementation pending as of Apr 2026
+    route_type: Suez Canal
+    source: "maersk.com Asia-Europe network update, Feb/Apr 2026"
+    calls:
+      - {port: Ningbo}
+      - {port: Shanghai}
+      - {port: Tanjung Pelepas}
+      - {port: Algeciras}
+      - {port: Koper}
+      - {port: Rijeka}
+      - {port: Algeciras}
+      - {port: Singapore}
+    transit_days: {}
+
+  - carrier: Maersk
+    service: AE15
+    operator_note: Gemini Cooperation Asia-Mediterranean-Europe string; calls Port Said + Damietta, Egypt; Suez re-implementation pending as of Apr 2026
+    route_type: Suez Canal
+    source: "maersk.com Asia-Europe network update, Feb/Apr 2026"
+    calls:
+      - {port: Qingdao}
+      - {port: Gwangyang}
+      - {port: Ningbo}
+      - {port: Tanjung Pelepas}
+      - {port: Port Said}
+      - {port: Damietta}
+      - {port: Colombo}
+      - {port: Singapore}
+    transit_days: {}
+
+  - carrier: CMA CGM
+    service: MEDEX
+    operator_note: Middle East Gulf & Indian Subcontinent - West Mediterranean; weekly; feeds Upper Gulf via Jeddah/Mundra/Sohar/Fujairah transshipment
+    route_type: Suez Canal
+    source: "CMA CGM MEDEX flyer, April 2026 (official, non-contractual transit times)"
+    calls:
+      - {port: Fos}
+      - {port: Valencia}
+      - {port: Genoa}
+      - {port: Malta}
+      - {port: Piraeus}
+      - {port: Port Said}
+      - {port: Jeddah}
+      - {port: Djibouti}
+      - {port: Mundra}
+      - {port: Nhava Sheva}
+      - {port: Hazira}
+      - {port: Colombo}
+      - {port: Karachi, transship: true}
+      - {port: Port Qasim, transship: true}
+      - {port: Mangalore, transship: true}
+    transit_days:
+      "Port Said -> Jeddah": 31
+      "Port Said -> Djibouti": 34
+      "Port Said -> Mundra": 40
+      "Port Said -> Nhava Sheva": 43
+      "Port Said -> Colombo": 47
+      "Port Said -> Port Qasim": 60
+      "Port Said -> Karachi": 61
+      "Malta -> Jeddah": 25
+      "Malta -> Djibouti": 28
+      "Malta -> Mundra": 34
+      "Malta -> Nhava Sheva": 37
+      "Malta -> Colombo": 41
+      "Malta -> Port Qasim": 54
+      "Malta -> Karachi": 55
+      "Genoa -> Jeddah": 18
+      "Genoa -> Djibouti": 21
+      "Genoa -> Mundra": 27
+      "Genoa -> Nhava Sheva": 29
+      "Genoa -> Colombo": 34
+      "Genoa -> Port Qasim": 47
+      "Genoa -> Karachi": 48
+      "Fos -> Jeddah": 15
+      "Fos -> Djibouti": 18
+      "Fos -> Mundra": 24
+      "Fos -> Nhava Sheva": 27
+      "Fos -> Colombo": 31
+      "Fos -> Port Qasim": 44
+      "Fos -> Karachi": 45
+      "Valencia -> Jeddah": 11
+      "Valencia -> Djibouti": 14
+      "Valencia -> Mundra": 21
+      "Valencia -> Nhava Sheva": 23
+      "Valencia -> Colombo": 28
+      "Valencia -> Port Qasim": 41
+      "Valencia -> Karachi": 42
+      "Piraeus -> Jeddah": 5
+      "Piraeus -> Djibouti": 8
+      "Piraeus -> Mundra": 15
+      "Piraeus -> Nhava Sheva": 17
+      "Piraeus -> Colombo": 22
+      "Piraeus -> Port Qasim": 35
+      "Piraeus -> Karachi": 36
+      "Jeddah -> Djibouti": 2
+      "Jeddah -> Mundra": 8
+      "Jeddah -> Nhava Sheva": 10
+      "Jeddah -> Colombo": 15
+      "Jeddah -> Port Qasim": 28
+      "Jeddah -> Karachi": 29
+      "Djibouti -> Mundra": 6
+      "Djibouti -> Nhava Sheva": 8
+      "Djibouti -> Colombo": 13
+      "Djibouti -> Port Qasim": 26
+      "Djibouti -> Karachi": 27
+      "Mundra -> Djibouti": 14
+      "Mundra -> Jeddah": 16
+      "Mundra -> Port Said": 21
+      "Mundra -> Malta": 25
+      "Mundra -> Genoa": 33
+      "Mundra -> Fos": 36
+      "Mundra -> Valencia": 40
+      "Mundra -> Piraeus": 45
+      "Port Qasim -> Djibouti": 14
+      "Port Qasim -> Jeddah": 16
+      "Port Qasim -> Port Said": 20
+      "Port Qasim -> Malta": 25
+      "Port Qasim -> Genoa": 32
+      "Port Qasim -> Fos": 36
+      "Port Qasim -> Valencia": 39
+      "Port Qasim -> Piraeus": 45
+      "Karachi -> Djibouti": 13
+      "Karachi -> Jeddah": 15
+      "Karachi -> Port Said": 19
+      "Karachi -> Malta": 24
+      "Karachi -> Genoa": 31
+      "Karachi -> Fos": 35
+      "Karachi -> Valencia": 38
+      "Karachi -> Piraeus": 44
+      "Nhava Sheva -> Djibouti": 11
+      "Nhava Sheva -> Jeddah": 14
+      "Nhava Sheva -> Port Said": 18
+      "Nhava Sheva -> Malta": 23
+      "Nhava Sheva -> Genoa": 30
+      "Nhava Sheva -> Fos": 33
+      "Nhava Sheva -> Valencia": 37
+      "Nhava Sheva -> Piraeus": 43
+      "Colombo -> Djibouti": 7
+      "Colombo -> Jeddah": 9
+      "Colombo -> Port Said": 13
+      "Colombo -> Malta": 18
+      "Colombo -> Genoa": 25
+      "Colombo -> Fos": 29
+      "Colombo -> Valencia": 32
+      "Colombo -> Piraeus": 38
+      "Djibouti -> Jeddah": 2
+      "Djibouti -> Port Said": 6
+      "Djibouti -> Malta": 11
+      "Djibouti -> Genoa": 18
+      "Djibouti -> Fos": 22
+      "Djibouti -> Valencia": 25
+      "Djibouti -> Piraeus": 31
+      "Jeddah -> Port Said": 3
+      "Jeddah -> Malta": 8
+      "Jeddah -> Genoa": 15
+      "Jeddah -> Fos": 19
+      "Jeddah -> Valencia": 22
+      "Jeddah -> Piraeus": 28
+
+  - carrier: CMA CGM
+    service: BIGEX 1
+    operator_note: Bangladesh India Gulf Express - weekly direct India-Gulf connection
+    route_type: Gulf (intra-regional, no Suez/Cape transit)
+    source: "CMA CGM BIGEX 1 flyer PDF"
+    calls:
+      - {port: Nhava Sheva}
+      - {port: Mundra}
+      - {port: Jebel Ali}
+      - {port: Khalifa Port}
+      - {port: Umm Qasr}
+      - {port: Karachi}
+      - {port: Shuaiba}
+      - {port: Jubail}
+    transit_days: {}

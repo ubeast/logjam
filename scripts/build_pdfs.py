@@ -139,6 +139,7 @@ _BRIEF_SLUGS = (
     "all_chokepoints_2026",
     "djibouti_port_2026",
     "global_map_2026",
+    "carrier_routes_2026",
 )
 
 
