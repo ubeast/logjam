@@ -1,7 +1,7 @@
 {
   "hormuz": {
     "meta": {
-      "generated": "2026-09-16T00:13:54+00:00",
+      "generated": "2026-09-16T00:29:25+00:00",
       "data_source": "IMF PortWatch (portwatch.imf.org)",
       "db_coverage": [
         "2023-01-01",
@@ -519,7 +519,7 @@
   },
   "suez_redsea": {
     "meta": {
-      "generated": "2026-09-16T00:13:53+00:00",
+      "generated": "2026-09-16T00:29:24+00:00",
       "data_source": "IMF PortWatch (portwatch.imf.org)",
       "db_coverage": [
         "2023-01-01",
@@ -877,7 +877,7 @@
   },
   "horn_of_africa": {
     "meta": {
-      "generated": "2026-09-16T00:13:54+00:00",
+      "generated": "2026-09-16T00:29:25+00:00",
       "data_source": "IMF PortWatch (portwatch.imf.org)",
       "db_coverage": [
         "2023-01-01",

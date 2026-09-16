@@ -1165,7 +1165,7 @@ CHART_JS = r"""
       svg.appendChild(el("rect", { x: bx, y: cy - 8, width: Math.max(bw, 1.5), height: 16, rx: 3, fill: color, "fill-opacity": "0.9" }));
 
       var nm = el("text", { x: labelW - 12, y: cy + 4, "text-anchor": "end", class: "series-label" });
-      nm.setAttribute("fill", "var(--ink)"); nm.textContent = r.name; svg.appendChild(nm);
+      nm.setAttribute("fill", "var(--ink)"); nm.textContent = r.name + (r.country ? " (" + r.country + ")" : ""); svg.appendChild(nm);
 
       var inside = pos && x1 > plotL + plotW - 52;
       var pv = el("text", {
@@ -1232,7 +1232,7 @@ CHART_JS = r"""
       }
 
       var nm = el("text", { x: labelW - 12, y: cy + 4, "text-anchor": "end", class: "series-label" });
-      nm.setAttribute("fill", "var(--ink)"); nm.textContent = r.name; svg.appendChild(nm);
+      nm.setAttribute("fill", "var(--ink)"); nm.textContent = r.name + (r.country ? " (" + r.country + ")" : ""); svg.appendChild(nm);
 
       var inside = x1 > plotL + plotW - 44;
       var pv = el("text", { x: inside ? x1 - 7 : x1 + 8, y: cy + 4,
@@ -1247,7 +1247,7 @@ CHART_JS = r"""
 
       var hit = el("rect", { class: "hit", x: 0, y: y, width: W, height: rowH });
       hit.addEventListener("mousemove", function (ev) {
-        showTip('<div class="tt-h">' + r.name + '</div>' +
+        showTip('<div class="tt-h">' + r.name + (r.country ? " (" + r.country + ")" : "") + '</div>' +
           '<div class="tt-row">Now vs own peak: <b>' + Math.round(r.pct) + '%</b></div>' +
           (r.mark != null ? '<div class="tt-row">vs sustained (p95): <b>' + Math.round(r.mark) + '%</b></div>' : '') +
           (r.note ? '<div class="tt-row">' + r.note + '</div>' : ''), ev.clientX, ev.clientY);
@@ -1349,6 +1349,9 @@ CHART_JS = r"""
             + (p.pct == null ? '' : ' of pre-crisis change') + '</b></div>'
           : '<div class="tt-row">Container calls: <b>' + ps + '</b></div>' +
             '<div class="tt-row">Change: <b>' + (p.delta >= 0 ? "+" : "") + fmt(p.delta) + " " + (opts.sizeUnit || "") + '</b></div>';
+        if (p.source) {
+          rows += '<div class="tt-row tt-src">' + p.source + (p.window ? " · " + p.window : "") + '</div>';
+        }
         var head = p.name + (p.country ? " (" + p.country + ")" : "");
         showTip('<div class="tt-h">' + head + '</div>' + rows, ev.clientX, ev.clientY);
       });
@@ -1363,7 +1366,8 @@ CHART_JS = r"""
       var cx = X(p.lon), cy = Y(p.lat);
       var r = p.role === "chokepoint" ? 8 : radius(p.delta);
       var left = p.labelSide === "left";
-      var t = txt(p.name, cx + (left ? -(r + 5) : r + 5), cy + 3.5 + (p.labelDy || 0),
+      var labelText = p.name + (p.country ? " (" + p.country + ")" : "");
+      var t = txt(labelText, cx + (left ? -(r + 5) : r + 5), cy + 3.5 + (p.labelDy || 0),
         left ? "end" : "start", "map-label");
       svg.appendChild(t);
     });

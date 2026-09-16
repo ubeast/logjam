@@ -641,8 +641,8 @@ def build() -> tuple[Brief, dict[str, Any], list[tuple[str, str, str, str]]]:
         ),
         CapacityChart(
             "chart-absorption",
-            rows=[{"name": a["name"], "pct": a["pct_of_peak"], "mark": a["pct_of_p95"],
-                   "band": a["band"],
+            rows=[{"name": a["name"], "country": a["iso3"], "pct": a["pct_of_peak"],
+                   "mark": a["pct_of_p95"], "band": a["band"],
                    "note": f"{a['current']:.1f} vs {a['peak']:.1f} peak/day"}
                   for a in absorption],
         ),

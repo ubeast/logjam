@@ -138,6 +138,7 @@ _BRIEF_SLUGS = (
     "horn_of_africa_2026",
     "all_chokepoints_2026",
     "djibouti_port_2026",
+    "global_map_2026",
 )
 
 

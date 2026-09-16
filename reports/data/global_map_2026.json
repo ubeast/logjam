@@ -1,0 +1,223 @@
+{
+  "meta": {
+    "generated": "2026-09-16T00:34:11+00:00",
+    "data_source": "Derived from reports/data/{hormuz_container_2026,suez_redsea_2026,horn_of_africa_2026,djibouti_port_2026}.json",
+    "basemap": "corridor"
+  },
+  "global_map": {
+    "bbox": [
+      -8.0,
+      5.0,
+      82.0,
+      42.0
+    ],
+    "points": [
+      {
+        "name": "Strait of Hormuz",
+        "lon": 56.8599,
+        "lat": 26.2968,
+        "delta": -14.0,
+        "pct": -93.0,
+        "role": "chokepoint",
+        "country": null,
+        "source": "Hormuz brief",
+        "window": "Jul 2026 vs Sep 2025-Feb 2026"
+      },
+      {
+        "name": "Jebel Ali",
+        "lon": 55.0778,
+        "lat": 24.9994,
+        "delta": -10.8,
+        "pct": -82.0,
+        "role": "loss",
+        "country": "United Arab Emirates",
+        "source": "Hormuz brief",
+        "window": "Jul 2026 vs Sep 2025-Feb 2026"
+      },
+      {
+        "name": "Nhava Sheva",
+        "lon": 72.9397,
+        "lat": 18.9173,
+        "delta": 3.9,
+        "pct": 108.0,
+        "role": "gain",
+        "country": "India",
+        "source": "Hormuz brief",
+        "window": "Jul 2026 vs Sep 2025-Feb 2026"
+      },
+      {
+        "name": "Karachi",
+        "lon": 66.9832,
+        "lat": 24.8233,
+        "delta": 1.3,
+        "pct": 100.0,
+        "role": "gain",
+        "country": "Pakistan",
+        "source": "Hormuz brief",
+        "window": "Jul 2026 vs Sep 2025-Feb 2026"
+      },
+      {
+        "name": "Salalah",
+        "lon": 54.0083,
+        "lat": 16.9423,
+        "delta": 0.9,
+        "pct": 41.0,
+        "role": "gain",
+        "country": "Oman",
+        "source": "Djibouti Port brief",
+        "window": "Jul 2026 vs Sep 2025-Feb 2026"
+      },
+      {
+        "name": "Damietta",
+        "lon": 31.7595,
+        "lat": 31.4621,
+        "delta": 0.8,
+        "pct": 40.0,
+        "role": "gain",
+        "country": "Egypt",
+        "source": "Hormuz brief",
+        "window": "Jul 2026 vs Sep 2025-Feb 2026"
+      },
+      {
+        "name": "Mundra",
+        "lon": 69.622,
+        "lat": 22.763,
+        "delta": 1.1,
+        "pct": 22.0,
+        "role": "gain",
+        "country": "India",
+        "source": "Hormuz brief",
+        "window": "Jul 2026 vs Sep 2025-Feb 2026"
+      },
+      {
+        "name": "Jeddah",
+        "lon": 39.1664,
+        "lat": 21.4608,
+        "delta": -1.4,
+        "pct": -31.0,
+        "role": "loss",
+        "country": "Saudi Arabia",
+        "source": "Djibouti Port brief",
+        "window": "Jul 2026 vs Sep 2025-Feb 2026"
+      },
+      {
+        "name": "Dammam",
+        "lon": 50.1944,
+        "lat": 26.4763,
+        "delta": -1.4,
+        "pct": -61.0,
+        "role": "loss",
+        "country": "Saudi Arabia",
+        "source": "Hormuz brief",
+        "window": "Jul 2026 vs Sep 2025-Feb 2026"
+      },
+      {
+        "name": "El Sokhna",
+        "lon": 32.3539,
+        "lat": 29.6474,
+        "delta": 0.9,
+        "pct": 100.0,
+        "role": "gain",
+        "country": "Egypt",
+        "source": "Suez & Red Sea brief",
+        "window": "Jul 2026 vs Sep-Nov 2023"
+      },
+      {
+        "name": "Colombo",
+        "lon": 79.8398,
+        "lat": 6.95,
+        "delta": 1.6,
+        "pct": 22.0,
+        "role": "gain",
+        "country": "Sri Lanka",
+        "source": "Suez & Red Sea brief",
+        "window": "Jul 2026 vs Sep-Nov 2023"
+      },
+      {
+        "name": "Marsaxlokk",
+        "lon": 14.538,
+        "lat": 35.8216,
+        "delta": -0.6,
+        "pct": -14.0,
+        "role": "loss",
+        "country": "Malta",
+        "source": "Suez & Red Sea brief",
+        "window": "Jul 2026 vs Sep-Nov 2023"
+      },
+      {
+        "name": "Piraeus",
+        "lon": 23.6038,
+        "lat": 37.9524,
+        "delta": -1.9,
+        "pct": -23.0,
+        "role": "loss",
+        "country": "Greece",
+        "source": "Suez & Red Sea brief",
+        "window": "Jul 2026 vs Sep-Nov 2023"
+      },
+      {
+        "name": "Algeciras",
+        "lon": -5.4143,
+        "lat": 36.1659,
+        "delta": -2.1,
+        "pct": -24.0,
+        "role": "loss",
+        "country": "Spain",
+        "source": "Suez & Red Sea brief",
+        "window": "Jul 2026 vs Sep-Nov 2023"
+      },
+      {
+        "name": "King Abdullah",
+        "lon": 39.0952,
+        "lat": 22.518,
+        "delta": 0.4,
+        "pct": 100.0,
+        "role": "gain",
+        "country": "Saudi Arabia",
+        "source": "Djibouti Port brief",
+        "window": "Jul 2026 vs Sep 2025-Feb 2026"
+      },
+      {
+        "name": "Suez Canal",
+        "lon": 32.4369,
+        "lat": 30.5934,
+        "delta": 0.0,
+        "pct": -54.0,
+        "role": "chokepoint",
+        "country": null,
+        "source": "Suez & Red Sea brief",
+        "window": "Jul 2026 vs Sep-Nov 2023"
+      },
+      {
+        "name": "Bab el-Mandeb",
+        "lon": 43.3495,
+        "lat": 12.7886,
+        "delta": 0.0,
+        "pct": -73.0,
+        "role": "chokepoint",
+        "country": null,
+        "source": "Horn of Africa brief",
+        "window": "Jul 2026 vs Sep-Nov 2023"
+      },
+      {
+        "name": "Djibouti",
+        "lon": 43.1037,
+        "lat": 11.5975,
+        "delta": 0.4,
+        "pct": 25.0,
+        "role": "gain",
+        "country": "Djibouti",
+        "source": "Horn of Africa brief",
+        "window": "Jul 2026 vs Sep-Nov 2023"
+      }
+    ],
+    "dropped": [
+      {
+        "name": "Mombasa",
+        "lon": 39.6345,
+        "lat": -4.0481,
+        "source": "Djibouti Port brief"
+      }
+    ]
+  }
+}
