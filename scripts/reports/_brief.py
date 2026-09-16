@@ -70,6 +70,14 @@ def country_of(con: duckdb.DuckDBPyConnection, entity_id: str) -> str | None:
     return row[0] if row and row[0] else None
 
 
+def short_name(name: str) -> str:
+    """A compact port label: prefer the parenthetical, else drop 'Port' noise."""
+    if "(" in name:
+        return name.split(" (")[-1].rstrip(")")
+    name = name.replace(" Port", "")
+    return name[len("Port of "):] if name.startswith("Port of ") else name
+
+
 def monthly(
     con: duckdb.DuckDBPyConnection, entity_id: str, metric: str, since: dt.date
 ) -> dict[str, float]:
@@ -491,7 +499,8 @@ def render_html(b: Brief) -> str:
         {"months": b.months, "charts": [_chart_to_json(c) for c in b.charts]}
     )
 
-    return f"""<title>{html.escape(b.title)}</title>
+    return f"""<meta charset="utf-8" />
+<title>{html.escape(b.title)}</title>
 <meta name="description" content="{html.escape(_strip_md(b.dek))}" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1333,9 +1342,11 @@ CHART_JS = r"""
       }
       var hit = el("circle", { class: "hit", cx: cx, cy: cy, r: Math.max(radius(p.delta || 0), 11) });
       hit.addEventListener("mousemove", function (ev) {
-        var ps = (p.pct >= 0 ? "+" : "") + Math.round(p.pct) + "%";
+        var ps = p.pct == null ? "n/a"
+          : (p.pct >= 0 ? "+" : "") + Math.round(p.pct) + "%";
         var rows = p.role === "chokepoint"
-          ? '<div class="tt-row">Container transits: <b>' + ps + ' of pre-crisis change</b></div>'
+          ? '<div class="tt-row">Container transits: <b>' + ps
+            + (p.pct == null ? '' : ' of pre-crisis change') + '</b></div>'
           : '<div class="tt-row">Container calls: <b>' + ps + '</b></div>' +
             '<div class="tt-row">Change: <b>' + (p.delta >= 0 ? "+" : "") + fmt(p.delta) + " " + (opts.sizeUnit || "") + '</b></div>';
         var head = p.name + (p.country ? " (" + p.country + ")" : "");

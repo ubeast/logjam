@@ -42,6 +42,7 @@ from _brief import (  # noqa: E402
     pct,
     pct_change,
     resolve,
+    short_name,
     window_avg,
     write_all,
 )
@@ -98,14 +99,6 @@ def quarterly(con: Any, entity_id: str, metric: str) -> list[float | None]:
     return [window_avg(con, entity_id, metric, *_q_bounds(y, q)) for y, q in QUARTERS]
 
 
-def short_name(name: str) -> str:
-    """A compact port label: prefer the parenthetical, else drop 'Port' noise."""
-    if "(" in name:
-        return name.split(" (")[-1].rstrip(")")
-    name = name.replace(" Port", "")
-    return name[len("Port of "):] if name.startswith("Port of ") else name
-
-
 def peak_month(con: Any, entity_id: str, metric: str) -> tuple[float, str, float] | None:
     """Return (busiest monthly-avg value, its 'YYYY-MM', 95th-pct monthly-avg).
 
@@ -129,7 +122,7 @@ def peak_month(con: Any, entity_id: str, metric: str) -> tuple[float, str, float
     return round(hi_val, 2), hi_mon, round(p95, 2)
 
 
-def main() -> None:
+def build() -> tuple[Brief, dict[str, Any], list[tuple[str, str, str, str]]]:
     con = connect()
 
     cov = con.execute("SELECT min(obs_date), max(obs_date) FROM observation").fetchone()
@@ -300,7 +293,7 @@ def main() -> None:
         side, dy = _LABEL_SIDE.get(short, ("right", 0.0))
         point = {
             "name": short, "lon": round(lon, 4), "lat": round(lat, 4),
-            "delta": delta, "pct": round(pc, 0) if pc is not None else 0.0,
+            "delta": delta, "pct": round(pc, 0) if pc is not None else None,
             "role": role or ("gain" if delta >= 0 else "loss"),
             "labelSide": side, "labelDy": dy,
         }
@@ -791,12 +784,17 @@ def main() -> None:
          f"{ja_imp['precrisis']:,.0f}", f"{ja_imp['pct_of_normal']:.0f} %"),
     ]
 
-    write_all(brief, payload, key_figures)
     con.close()
     print(f"  Hormuz container: {h_con['pct_of_normal']:.0f}% of normal | "
           f"capacity {h_cap['pct_of_normal']:.0f}% | "
           f"Jebel Ali calls {ja_calls['pct_of_normal']:.0f}% | "
           f"reroute winners: {winners_txt}")
+    return brief, payload, key_figures
+
+
+def main() -> None:
+    brief, payload, key_figures = build()
+    write_all(brief, payload, key_figures)
 
 
 if __name__ == "__main__":

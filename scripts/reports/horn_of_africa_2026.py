@@ -31,18 +31,23 @@ from _brief import (  # noqa: E402
     DataTable,
     DivergingChart,
     LineChart,
+    MapChart,
     Section,
     Tile,
     connect,
+    country_of,
     month_keys,
     month_labels,
     monthly,
     pct,
     pct_change,
     resolve,
+    short_name,
     window_avg,
     write_all,
 )
+from _geo import basemap as geo_basemap  # noqa: E402
+from _geo import map_point as geo_map_point  # noqa: E402
 
 SLUG = "horn_of_africa_2026"
 BAB = "chokepoint4"
@@ -81,7 +86,7 @@ def detail_series(con: Any, entity_id: str, metric: str) -> list[float]:
     return [m.get(k, 0.0) for k in DETAIL_KEYS]
 
 
-def main() -> None:
+def build() -> tuple[Brief, dict[str, Any], list[tuple[str, str, str, str]]]:
     con = connect()
 
     cov = con.execute("SELECT min(obs_date), max(obs_date) FROM observation").fetchone()
@@ -128,6 +133,35 @@ def main() -> None:
     jed = next((p for p in ports if p["name"] == "Jeddah"), None)
     kap = next((p for p in ports if "Abdullah" in p["name"]), None)
 
+    # ---- map: the Bab el-Mandeb region, who held and who lost ------------
+    BASEMAP = "redsea"
+    _bmap = geo_basemap(BASEMAP)
+    # Nudge the labels of ports that sit almost on top of a neighbour.
+    _LABEL_EXTRA = {"Djibouti": {"labelDy": 11.0}, "Jeddah": {"labelDy": 11.0}}
+    map_points: list[dict[str, Any]] = []
+    for p in ports:
+        d = p["current"] - p["precrisis"]
+        if abs(d) < 0.25:
+            continue
+        sn = short_name(p["name"])
+        mp = geo_map_point(
+            p["entity_id"], sn, d, p["pct_change"],
+            role="gain" if d >= 0 else "loss", basemap_name=BASEMAP,
+            country=country_of(con, p["entity_id"]), extra=_LABEL_EXTRA.get(sn),
+        )
+        if mp:
+            map_points.append(mp)
+    mp = geo_map_point(
+        BAB, "Bab el-Mandeb", 0.0, bab["n_container"]["pct_change"],
+        role="chokepoint", basemap_name=BASEMAP,
+    )
+    if mp:
+        map_points.append(mp)
+    _map_size_max = max(
+        (abs(p["delta"]) for p in map_points if p["role"] != "chokepoint"), default=1.0
+    )
+    _map_labels = [short_name(p["name"]) for p in ports] + ["Bab el-Mandeb"]
+
     payload = {
         "meta": {
             "generated": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
@@ -141,6 +175,14 @@ def main() -> None:
         "bab_el_mandeb": bab,
         "cape_of_good_hope": cape,
         "ports": ports,
+        "region_map": {
+            "bbox": _bmap["bbox"],
+            "points": map_points,
+            "size_metric": (
+                f"change in container port calls/day, {CURRENT_LABEL} vs the "
+                "Sep-Nov 2023 baseline"
+            ),
+        },
     }
 
     b_tot = bab["n_total"]
@@ -280,7 +322,28 @@ def main() -> None:
             },
         ),
         Section(
-            "6", "Assessment",
+            "6", "The regional picture, mapped",
+            body_md=(
+                "**Bab el-Mandeb** marked, the regional container ports coloured by "
+                "how their call counts moved — green held or grew, red fell, bubble "
+                "area proportional to the daily change. **Djibouti** and **Salalah** "
+                "hold as the regional anchors; the **Saudi Red Sea** ports "
+                f"(Jeddah {jed['pct_change']:+.0f}%, King Abdullah "
+                f"{kap['pct_change']:+.0f}%) are the deepest losses. The "
+                "container traffic that no longer transits the strait runs south "
+                "around the Cape of Good Hope (off this frame — see §2)."
+            ),
+            figure={
+                "title": "The Bab el-Mandeb region — who held, who lost",
+                "sub": f"Change in container port calls/day, {CURRENT_LABEL} vs Sep-Nov 2023",
+                "chart_id": "chart-map",
+                "caption": "Basemap: Natural Earth 10m (public domain). Coordinates: "
+                "IMF PortWatch. The strait is marked, not sized. Ports with a change "
+                "too small to plot (<0.25 calls/day) are omitted here but appear in §5.",
+            },
+        ),
+        Section(
+            "7", "Assessment",
             body_md=(
                 f"The Bab el-Mandeb is a persistently degraded chokepoint — mixed "
                 f"traffic near **{b_tot['pct_of_normal']:.0f}% of pre-crisis**, "
@@ -335,6 +398,13 @@ def main() -> None:
             rows=[{"name": p["name"], "country": p["iso3"], "pct": int(p["pct_change"]),
                    "a": p["precrisis"], "b": p["current"]} for p in ports],
             max_abs=max(80, min(135, max(abs(p["pct_change"]) for p in ports) + 15)),
+        ),
+        MapChart(
+            "chart-map",
+            bbox=_bmap["bbox"], land=_bmap["land"], borders=_bmap["borders"],
+            points=map_points, size_max=_map_size_max, size_unit="calls/day",
+            size_legend=[1, 3, round(_map_size_max)] if _map_size_max >= 4 else [1, 2, 3],
+            labels=_map_labels,
         ),
     ]
 
@@ -437,11 +507,16 @@ def main() -> None:
          f"{dji['pct_change']:+.0f} %" if dji else "–"),
     ]
 
-    write_all(brief, payload, key_figures)
     con.close()
     print(f"  Bab total: {b_tot['pct_of_normal']:.0f}% | container: "
           f"{b_con['pct_of_normal']:.0f}% | capacity: {b_cap['pct_of_normal']:.0f}% | "
           f"latest month {latest:.0f}/day (provisional)")
+    return brief, payload, key_figures
+
+
+def main() -> None:
+    brief, payload, key_figures = build()
+    write_all(brief, payload, key_figures)
 
 
 if __name__ == "__main__":

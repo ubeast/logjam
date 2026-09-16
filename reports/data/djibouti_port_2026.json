@@ -1,0 +1,298 @@
+{
+  "meta": {
+    "generated": "2026-09-16T00:21:15+00:00",
+    "data_source": "IMF PortWatch (portwatch.imf.org)",
+    "db_coverage": [
+      "2023-01-01",
+      "2026-09-13"
+    ],
+    "precrisis_window": [
+      "2023-09-01",
+      "2023-12-01"
+    ],
+    "reroute_base_window": [
+      "2025-09-01",
+      "2026-03-01"
+    ],
+    "current_window": [
+      "2026-07-01",
+      "2026-08-01"
+    ],
+    "quarters": [
+      "23 Q1",
+      "23 Q2",
+      "23 Q3",
+      "23 Q4",
+      "24 Q1",
+      "24 Q2",
+      "24 Q3",
+      "24 Q4",
+      "25 Q1",
+      "25 Q2",
+      "25 Q3",
+      "25 Q4",
+      "26 Q1",
+      "26 Q2",
+      "26 Q3"
+    ]
+  },
+  "djibouti": {
+    "portcalls_container": {
+      "precrisis": 1.6,
+      "current": 2.0,
+      "pct_of_normal": 125.0,
+      "pct_change": 25.0
+    },
+    "portcalls": {
+      "precrisis": 3.8,
+      "current": 3.6,
+      "pct_of_normal": 94.7,
+      "pct_change": -5.0
+    },
+    "import_container": {
+      "precrisis": 14606.0,
+      "current": 8741.4,
+      "pct_of_normal": 59.8,
+      "pct_change": -40.0
+    },
+    "export_container": {
+      "precrisis": 1477.8,
+      "current": 3738.6,
+      "pct_of_normal": 253.0,
+      "pct_change": 153.0
+    },
+    "portcalls_container_quarterly": [
+      1.4,
+      1.4,
+      1.6,
+      1.6,
+      1.6,
+      1.6,
+      1.7,
+      1.8,
+      1.9,
+      1.7,
+      1.9,
+      1.9,
+      1.7,
+      1.6,
+      1.8
+    ],
+    "import_container_quarterly": [
+      9332.1,
+      8194.2,
+      12374.2,
+      13868.8,
+      10399.4,
+      10223.7,
+      9970.3,
+      10208.4,
+      8760.1,
+      8753.8,
+      11289.9,
+      9217.1,
+      9734.9,
+      7662.4,
+      8695.9
+    ],
+    "export_container_quarterly": [
+      980.2,
+      1533.4,
+      1766.0,
+      1745.2,
+      2050.9,
+      2091.9,
+      2094.2,
+      2173.1,
+      2648.7,
+      1856.3,
+      1543.5,
+      1562.2,
+      2423.8,
+      3200.5,
+      4096.8
+    ]
+  },
+  "regional_ports": [
+    {
+      "entity_id": "port2031",
+      "name": "King Abdullah Port",
+      "iso3": "SAU",
+      "precrisis": 0.4,
+      "current": 0.8,
+      "pct_change": 100.0
+    },
+    {
+      "entity_id": "port746",
+      "name": "Salalah",
+      "iso3": "OMN",
+      "precrisis": 2.2,
+      "current": 3.1,
+      "pct_change": 41.0
+    },
+    {
+      "entity_id": "port977",
+      "name": "Port Sudan",
+      "iso3": "SDN",
+      "precrisis": 0.4,
+      "current": 0.5,
+      "pct_change": 25.0
+    },
+    {
+      "entity_id": "port294",
+      "name": "Djibouti",
+      "iso3": "DJI",
+      "precrisis": 1.9,
+      "current": 2.0,
+      "pct_change": 5.0
+    },
+    {
+      "entity_id": "port757",
+      "name": "Mombasa",
+      "iso3": "KEN",
+      "precrisis": 1.8,
+      "current": 1.5,
+      "pct_change": -17.0
+    },
+    {
+      "entity_id": "port518",
+      "name": "Jeddah",
+      "iso3": "SAU",
+      "precrisis": 4.5,
+      "current": 3.1,
+      "pct_change": -31.0
+    }
+  ],
+  "absorption": {
+    "metric": "portcalls_container",
+    "ceiling_proxy": "busiest calendar month since 2023-01-01",
+    "rows": [
+      {
+        "entity_id": "port294",
+        "name": "Djibouti",
+        "iso3": "DJI",
+        "current": 2.0,
+        "peak": 2.03,
+        "peak_month": "2025-09",
+        "peak_month_label": "Sep 2025",
+        "p95": 2.0,
+        "pct_of_peak": 98.5,
+        "pct_of_p95": 100.0,
+        "band": "maxed"
+      },
+      {
+        "entity_id": "port746",
+        "name": "Salalah",
+        "iso3": "OMN",
+        "current": 3.1,
+        "peak": 3.23,
+        "peak_month": "2023-03",
+        "peak_month_label": "Mar 2023",
+        "p95": 3.13,
+        "pct_of_peak": 96.0,
+        "pct_of_p95": 99.0,
+        "band": "maxed"
+      },
+      {
+        "entity_id": "port977",
+        "name": "Port Sudan",
+        "iso3": "SDN",
+        "current": 0.5,
+        "peak": 0.71,
+        "peak_month": "2026-03",
+        "peak_month_label": "Mar 2026",
+        "p95": 0.64,
+        "pct_of_peak": 70.4,
+        "pct_of_p95": 78.1,
+        "band": "headroom"
+      },
+      {
+        "entity_id": "port757",
+        "name": "Mombasa",
+        "iso3": "KEN",
+        "current": 1.5,
+        "peak": 2.32,
+        "peak_month": "2024-10",
+        "peak_month_label": "Oct 2024",
+        "p95": 2.03,
+        "pct_of_peak": 64.7,
+        "pct_of_p95": 73.9,
+        "band": "headroom"
+      },
+      {
+        "entity_id": "port518",
+        "name": "Jeddah",
+        "iso3": "SAU",
+        "current": 3.1,
+        "peak": 7.29,
+        "peak_month": "2023-07",
+        "peak_month_label": "Jul 2023",
+        "p95": 7.1,
+        "pct_of_peak": 42.5,
+        "pct_of_p95": 43.7,
+        "band": "headroom"
+      },
+      {
+        "entity_id": "port2031",
+        "name": "King Abdullah",
+        "iso3": "SAU",
+        "current": 0.8,
+        "peak": 2.9,
+        "peak_month": "2023-08",
+        "peak_month_label": "Aug 2023",
+        "p95": 2.77,
+        "pct_of_peak": 27.6,
+        "pct_of_p95": 28.9,
+        "band": "headroom"
+      }
+    ]
+  },
+  "region_map": {
+    "bbox": [
+      28.0,
+      -8.0,
+      60.0,
+      33.0
+    ],
+    "points": [
+      {
+        "name": "King Abdullah",
+        "lon": 39.0952,
+        "lat": 22.518,
+        "delta": 0.4,
+        "pct": 100.0,
+        "role": "gain",
+        "country": "Saudi Arabia"
+      },
+      {
+        "name": "Salalah",
+        "lon": 54.0083,
+        "lat": 16.9423,
+        "delta": 0.9,
+        "pct": 41.0,
+        "role": "gain",
+        "country": "Oman"
+      },
+      {
+        "name": "Mombasa",
+        "lon": 39.6345,
+        "lat": -4.0481,
+        "delta": -0.3,
+        "pct": -17.0,
+        "role": "loss",
+        "country": "Kenya"
+      },
+      {
+        "name": "Jeddah",
+        "lon": 39.1664,
+        "lat": 21.4608,
+        "delta": -1.4,
+        "pct": -31.0,
+        "role": "loss",
+        "country": "Saudi Arabia",
+        "labelDy": 11.0
+      }
+    ],
+    "size_metric": "change in container port calls/day, July 2026 vs the Sep 2025 - Feb 2026 window"
+  }
+}

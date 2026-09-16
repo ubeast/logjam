@@ -6,8 +6,8 @@
 |---|---|
 | **By** | Michael Schertz |
 | **Tooling** | [`logjam`](https://github.com/ubeast/logjam) (open-source) |
-| **Generated** | 30 Aug 2026 |
-| **Data as of** | 23 Aug 2026 |
+| **Generated** | 15 Sep 2026 |
+| **Data as of** | 13 Sep 2026 |
 | **Source** | IMF PortWatch (`portwatch.imf.org`) |
 | **Verdict** | Ongoing · Possible Fresh Dip |
 
@@ -51,7 +51,7 @@ A route-wide hard closure would flatten every class equally. The gap between tan
 
 ## 4. A fresh dip in mid-2026 — worth watching
 
-Total transits had actually ground back to a post-crisis high of about **37 per day** through the spring of 2026. Then they slipped: **34** in July and **28** in August 2026. Tanker transits fell alongside.
+Total transits had actually ground back to a post-crisis high of about **37 per day** through the spring of 2026. Then they slipped: **34** in July and **27** in August 2026. Tanker transits fell alongside.
 
 Two things temper this. The most recent month is provisional — PortWatch revises its last ~2 weeks upward as more satellite data lands, so August 2026 will likely be marked up. But the direction is consistent with the March 2026 Strait of Hormuz crisis pulling war-risk insurance capacity and underwriting appetite out of the whole region at once. This is a signal to track, not yet a confirmed second leg down.
 
@@ -61,7 +61,11 @@ Two things temper this. The most recent month is provisional — PortWatch revis
 
 The port-level casualties are on the **Saudi Red Sea coast**, which has no way around its own geography: **Jeddah** container calls are down **55%** and **King Abdullah Port** down **67%** — both sit deep inside the risk zone with the Suez route as their only artery. East African feeder ports (Berbera, Mombasa) are down modestly, squeezed by thinner regional transshipment.
 
-## 6. Assessment
+## 6. The regional picture, mapped
+
+**Bab el-Mandeb** marked, the regional container ports coloured by how their call counts moved — green held or grew, red fell, bubble area proportional to the daily change. **Djibouti** and **Salalah** hold as the regional anchors; the **Saudi Red Sea** ports (Jeddah -55%, King Abdullah -67%) are the deepest losses. The container traffic that no longer transits the strait runs south around the Cape of Good Hope (off this frame — see §2).
+
+## 7. Assessment
 
 The Bab el-Mandeb is a persistently degraded chokepoint — mixed traffic near **44% of pre-crisis**, containers effectively removed — with a possible fresh deterioration in the second half of 2026 that the next few PortWatch refreshes will confirm or revise away. Djibouti is the regional constant; the Saudi Red Sea ports are the clearest port-level loss; the Cape of Good Hope remains the route.
 
@@ -73,7 +77,7 @@ The same two caveats apply as to any PortWatch read: the data shows the shipping
 
 Every figure in this brief is reproducible from a local database built by the open-source `logjam` tool and a single generator script. Nothing is hand-transcribed.
 
-**Data source.** IMF PortWatch (portwatch.imf.org) — daily maritime activity estimated from satellite AIS via the UN Global Platform. Free public use with attribution. Backfill covers 1 Jan 2023 – 23 Aug 2026.
+**Data source.** IMF PortWatch (portwatch.imf.org) — daily maritime activity estimated from satellite AIS via the UN Global Platform. Free public use with attribution. Backfill covers 1 Jan 2023 – 13 Sep 2026.
 
 **What the numbers are.** `n_total` / `n_container` / `n_tanker` are counts of vessel transits by class at chokepoint 4. `capacity_container` is the estimated aggregate cargo capacity of transiting container ships. `portcalls_container` is container-ship port calls.
 

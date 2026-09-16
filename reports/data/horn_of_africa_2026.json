@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated": "2026-08-31T00:31:31+00:00",
+    "generated": "2026-09-16T00:12:37+00:00",
     "data_source": "IMF PortWatch (portwatch.imf.org)",
     "db_coverage": [
       "2023-01-01",
-      "2026-08-23"
+      "2026-09-13"
     ],
     "precrisis_window": [
       "2023-09-01",
@@ -101,7 +101,7 @@
       35.5,
       35.2,
       36.5,
-      31.2
+      29.8
     ],
     "n_container_quarterly": [
       17.6,
@@ -135,7 +135,7 @@
       36.1,
       36.6,
       33.6,
-      27.8
+      27.4
     ],
     "n_tanker_detail": [
       11.6,
@@ -152,7 +152,7 @@
       13.9,
       13.8,
       11.6,
-      8.8
+      8.5
     ]
   },
   "cape_of_good_hope": {
@@ -242,5 +242,71 @@
       "current": 0.8,
       "pct_change": -67.0
     }
-  ]
+  ],
+  "region_map": {
+    "bbox": [
+      28.0,
+      -8.0,
+      60.0,
+      33.0
+    ],
+    "points": [
+      {
+        "name": "Djibouti",
+        "lon": 43.1037,
+        "lat": 11.5975,
+        "delta": 0.4,
+        "pct": 25.0,
+        "role": "gain",
+        "country": "Djibouti",
+        "labelDy": 11.0
+      },
+      {
+        "name": "Salalah",
+        "lon": 54.0083,
+        "lat": 16.9423,
+        "delta": 0.3,
+        "pct": 11.0,
+        "role": "gain",
+        "country": "Oman"
+      },
+      {
+        "name": "Mombasa",
+        "lon": 39.6345,
+        "lat": -4.0481,
+        "delta": -0.3,
+        "pct": -17.0,
+        "role": "loss",
+        "country": "Kenya"
+      },
+      {
+        "name": "Jeddah",
+        "lon": 39.1664,
+        "lat": 21.4608,
+        "delta": -3.8,
+        "pct": -55.0,
+        "role": "loss",
+        "country": "Saudi Arabia",
+        "labelDy": 11.0
+      },
+      {
+        "name": "King Abdullah",
+        "lon": 39.0952,
+        "lat": 22.518,
+        "delta": -1.6,
+        "pct": -67.0,
+        "role": "loss",
+        "country": "Saudi Arabia"
+      },
+      {
+        "name": "Bab el-Mandeb",
+        "lon": 43.3495,
+        "lat": 12.7886,
+        "delta": 0.0,
+        "pct": -73.0,
+        "role": "chokepoint"
+      }
+    ],
+    "size_metric": "change in container port calls/day, July 2026 vs the Sep-Nov 2023 baseline"
+  }
 }

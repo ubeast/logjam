@@ -6,8 +6,8 @@
 |---|---|
 | **By** | Michael Schertz |
 | **Tooling** | [`logjam`](https://github.com/ubeast/logjam) (open-source) |
-| **Generated** | 30 Aug 2026 |
-| **Data as of** | 23 Aug 2026 |
+| **Generated** | 15 Sep 2026 |
+| **Data as of** | 13 Sep 2026 |
 | **Source** | IMF PortWatch (`portwatch.imf.org`) |
 | **Verdict** | Ongoing · No Container Recovery |
 
@@ -63,7 +63,11 @@ There is no clear port-level winner, because the reroute is a longer version of 
 
 Egypt's own canal-adjacent container ports (Port Said, Damietta) are roughly flat — they were never the point of the route. The one consistent gainer is **Colombo**, up as a consolidation point where Asian cargo is aggregated onto the big ships before the long haul around the Cape.
 
-## 6. Assessment
+## 6. The reroute, mapped
+
+The Asia-Europe corridor in one frame: **Suez** and **Bab el-Mandeb** marked, the container ports that lost calls in red and gained in green, bubble area proportional to the change per day. The Mediterranean feeder hubs (Piraeus, Algeciras, Marsaxlokk) and the Saudi Red Sea ports carry the loss; **Colombo** is the one consistent gainer, as a consolidation point onto the big ships. There is no new hub, because the diversion runs south around the Cape of Good Hope (off this frame — see §4), a longer version of the same voyage rather than a switch.
+
+## 7. Assessment
 
 The Suez Canal in 2026 is a structurally smaller artery. Mixed traffic has stabilised near **55% of pre-crisis**; containerised trade shows **no recovery trend** after nine quarters and runs at well under half its former volume. The Cape of Good Hope is the load-bearing alternative and there is no sign of that unwinding.
 
@@ -75,7 +79,7 @@ Two caveats bound this read. PortWatch measures vessel movements, not their caus
 
 Every figure in this brief is reproducible from a local database built by the open-source `logjam` tool and a single generator script. Nothing is hand-transcribed.
 
-**Data source.** IMF PortWatch (portwatch.imf.org) — daily maritime activity estimated from satellite AIS on ~90,000 ships, via the UN Global Platform. Free public use with attribution. Backfill covers 1 Jan 2023 – 23 Aug 2026.
+**Data source.** IMF PortWatch (portwatch.imf.org) — daily maritime activity estimated from satellite AIS on ~90,000 ships, via the UN Global Platform. Free public use with attribution. Backfill covers 1 Jan 2023 – 13 Sep 2026.
 
 **What the numbers are.** `n_total` / `n_container` / `n_tanker` are counts of vessel transits by class. `capacity_container` is the estimated aggregate cargo capacity of transiting container ships. `portcalls_container` is container-ship port calls.
 

@@ -32,15 +32,20 @@ from _brief import (  # noqa: E402
     DataTable,
     DivergingChart,
     LineChart,
+    MapChart,
     Section,
     Tile,
     connect,
+    country_of,
     pct,
     pct_change,
     resolve,
+    short_name,
     window_avg,
     write_all,
 )
+from _geo import basemap as geo_basemap  # noqa: E402
+from _geo import map_point as geo_map_point  # noqa: E402
 
 SLUG = "suez_redsea_2026"
 SUEZ = "chokepoint1"
@@ -75,7 +80,7 @@ def quarterly(con: Any, entity_id: str, metric: str) -> list[float | None]:
     return [window_avg(con, entity_id, metric, *_q_bounds(y, q)) for y, q in QUARTERS]
 
 
-def main() -> None:
+def build() -> tuple[Brief, dict[str, Any], list[tuple[str, str, str, str]]]:
     con = connect()
 
     cov = con.execute("SELECT min(obs_date), max(obs_date) FROM observation").fetchone()
@@ -122,6 +127,41 @@ def main() -> None:
                       "precrisis": a, "current": b, "pct_change": pct_change(b, a)})
     ports.sort(key=lambda p: p["pct_change"], reverse=True)
 
+    # ---- map: the Asia-Europe corridor and its port winners / losers -----
+    BASEMAP = "corridor"
+    _bmap = geo_basemap(BASEMAP)
+    map_points: list[dict[str, Any]] = []
+    for p in ports:
+        d = p["current"] - p["precrisis"]
+        if abs(d) < 0.4:  # a dot too small to read - stays in the chart below
+            continue
+        mp = geo_map_point(
+            p["entity_id"], short_name(p["name"]), d, p["pct_change"],
+            role="gain" if d >= 0 else "loss", basemap_name=BASEMAP,
+            country=country_of(con, p["entity_id"]),
+        )
+        if mp:
+            map_points.append(mp)
+    for cid, cname, cpct in (
+        (SUEZ, "Suez Canal", suez["n_container"]["pct_change"]),
+        (BAB, "Bab el-Mandeb", bab["n_container"]["pct_change"]),
+    ):
+        mp = geo_map_point(cid, cname, 0.0, cpct, role="chokepoint", basemap_name=BASEMAP)
+        if mp:
+            map_points.append(mp)
+    _map_size_max = max(
+        (abs(p["delta"]) for p in map_points if p["role"] != "chokepoint"), default=1.0
+    )
+    # Label the biggest movers actually drawn on the map, ranked by the same
+    # absolute change that sizes the bubbles — not by percent, which would
+    # spotlight a tiny-base port that was filtered out and never drew a bubble.
+    _map_labels = [
+        p["name"] for p in sorted(
+            (q for q in map_points if q["role"] != "chokepoint"),
+            key=lambda q: abs(q["delta"]), reverse=True,
+        )[:6]
+    ] + ["Suez Canal", "Bab el-Mandeb"]
+
     payload = {
         "meta": {
             "generated": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
@@ -135,6 +175,14 @@ def main() -> None:
         "bab_el_mandeb": bab,
         "cape_of_good_hope": cape,
         "ports": ports,
+        "reroute_map": {
+            "bbox": _bmap["bbox"],
+            "points": map_points,
+            "size_metric": (
+                f"change in container port calls/day, {CURRENT_LABEL} vs the "
+                "Sep-Nov 2023 baseline"
+            ),
+        },
     }
 
     # ---------------------------------------------------------------- prose --
@@ -275,7 +323,29 @@ def main() -> None:
             },
         ),
         Section(
-            "6", "Assessment",
+            "6", "The reroute, mapped",
+            body_md=(
+                "The Asia-Europe corridor in one frame: **Suez** and **Bab el-Mandeb** "
+                "marked, the container ports that lost calls in red and gained in "
+                "green, bubble area proportional to the change per day. The "
+                "Mediterranean feeder hubs (Piraeus, Algeciras, Marsaxlokk) and the "
+                "Saudi Red Sea ports carry the loss; **Colombo** is the one consistent "
+                "gainer, as a consolidation point onto the big ships. There is no new "
+                "hub, because the diversion runs south around the Cape of Good Hope "
+                "(off this frame — see §4), a longer version of the same voyage rather "
+                "than a switch."
+            ),
+            figure={
+                "title": "Where the container trade moved — the Asia-Europe corridor",
+                "sub": f"Change in container port calls/day, {CURRENT_LABEL} vs Sep-Nov 2023",
+                "chart_id": "chart-map",
+                "caption": "Basemap: Natural Earth 10m (public domain). Coordinates: "
+                "IMF PortWatch. Chokepoints marked, not sized; small movers "
+                "(<0.4 calls/day) are omitted here but shown in the chart above.",
+            },
+        ),
+        Section(
+            "7", "Assessment",
             body_md=(
                 f"The Suez Canal in 2026 is a structurally smaller artery. Mixed "
                 f"traffic has stabilised near **{s_tot['pct_of_normal']:.0f}% of "
@@ -329,6 +399,13 @@ def main() -> None:
             rows=[{"name": p["name"], "country": p["iso3"], "pct": int(p["pct_change"]),
                    "a": p["precrisis"], "b": p["current"]} for p in ports],
             max_abs=max(80, min(135, max(abs(p["pct_change"]) for p in ports) + 15)),
+        ),
+        MapChart(
+            "chart-map",
+            bbox=_bmap["bbox"], land=_bmap["land"], borders=_bmap["borders"],
+            points=map_points, size_max=_map_size_max, size_unit="calls/day",
+            size_legend=[1, 3, round(_map_size_max)] if _map_size_max >= 4 else [1, 2, 3],
+            labels=_map_labels,
         ),
     ]
 
@@ -430,11 +507,16 @@ def main() -> None:
          f"{c_con['precrisis']:.0f}", f"{c_con['pct_change']:+.0f} %"),
     ]
 
-    write_all(brief, payload, key_figures)
     con.close()
     print(f"  Suez total: {s_tot['pct_of_normal']:.0f}% of normal | "
           f"container: {s_con['pct_of_normal']:.0f}% | "
           f"Cape container {c_con['pct_change']:+.0f}%")
+    return brief, payload, key_figures
+
+
+def main() -> None:
+    brief, payload, key_figures = build()
+    write_all(brief, payload, key_figures)
 
 
 if __name__ == "__main__":

@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated": "2026-08-31T00:31:30+00:00",
+    "generated": "2026-09-16T00:12:36+00:00",
     "data_source": "IMF PortWatch (portwatch.imf.org)",
     "db_coverage": [
       "2023-01-01",
-      "2026-08-23"
+      "2026-09-13"
     ],
     "precrisis_window": [
       "2023-09-01",
@@ -84,7 +84,7 @@
       41.4,
       40.4,
       40.5,
-      41.4
+      41.3
     ],
     "n_container_quarterly": [
       17.4,
@@ -101,7 +101,7 @@
       9.5,
       8.9,
       8.2,
-      9.1
+      9.5
     ]
   },
   "bab_el_mandeb": {
@@ -164,7 +164,7 @@
       19.8,
       20.1,
       20.7,
-      19.5
+      18.9
     ]
   },
   "ports": [
@@ -264,5 +264,95 @@
       "current": 0.8,
       "pct_change": -67.0
     }
-  ]
+  ],
+  "reroute_map": {
+    "bbox": [
+      -8.0,
+      5.0,
+      82.0,
+      42.0
+    ],
+    "points": [
+      {
+        "name": "El Sokhna",
+        "lon": 32.3539,
+        "lat": 29.6474,
+        "delta": 0.9,
+        "pct": 100.0,
+        "role": "gain",
+        "country": "Egypt"
+      },
+      {
+        "name": "Colombo",
+        "lon": 79.8398,
+        "lat": 6.95,
+        "delta": 1.6,
+        "pct": 22.0,
+        "role": "gain",
+        "country": "Sri Lanka"
+      },
+      {
+        "name": "Marsaxlokk",
+        "lon": 14.538,
+        "lat": 35.8216,
+        "delta": -0.6,
+        "pct": -14.0,
+        "role": "loss",
+        "country": "Malta"
+      },
+      {
+        "name": "Piraeus",
+        "lon": 23.6038,
+        "lat": 37.9524,
+        "delta": -1.9,
+        "pct": -23.0,
+        "role": "loss",
+        "country": "Greece"
+      },
+      {
+        "name": "Algeciras",
+        "lon": -5.4143,
+        "lat": 36.1659,
+        "delta": -2.1,
+        "pct": -24.0,
+        "role": "loss",
+        "country": "Spain"
+      },
+      {
+        "name": "Jeddah",
+        "lon": 39.1664,
+        "lat": 21.4608,
+        "delta": -3.8,
+        "pct": -55.0,
+        "role": "loss",
+        "country": "Saudi Arabia"
+      },
+      {
+        "name": "King Abdullah",
+        "lon": 39.0952,
+        "lat": 22.518,
+        "delta": -1.6,
+        "pct": -67.0,
+        "role": "loss",
+        "country": "Saudi Arabia"
+      },
+      {
+        "name": "Suez Canal",
+        "lon": 32.4369,
+        "lat": 30.5934,
+        "delta": 0.0,
+        "pct": -54.0,
+        "role": "chokepoint"
+      },
+      {
+        "name": "Bab el-Mandeb",
+        "lon": 43.3495,
+        "lat": 12.7886,
+        "delta": 0.0,
+        "pct": -73.0,
+        "role": "chokepoint"
+      }
+    ],
+    "size_metric": "change in container port calls/day, July 2026 vs the Sep-Nov 2023 baseline"
+  }
 }

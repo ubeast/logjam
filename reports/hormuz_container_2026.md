@@ -6,8 +6,8 @@
 |---|---|
 | **By** | Michael Schertz |
 | **Tooling** | [`logjam`](https://github.com/ubeast/logjam) (open-source) |
-| **Generated** | 2 Sep 2026 |
-| **Data as of** | 23 Aug 2026 |
+| **Generated** | 15 Sep 2026 |
+| **Data as of** | 13 Sep 2026 |
 | **Source** | IMF PortWatch (`portwatch.imf.org`) |
 | **Verdict** | Severe · Ongoing |
 
@@ -107,7 +107,7 @@ PortWatch measures vessel movements, not their causes: the March 2026 break coin
 
 Every figure in this brief is reproducible from a local database built by the open-source `logjam` tool and a single generator script. Nothing is hand-transcribed.
 
-**Data source.** IMF PortWatch (portwatch.imf.org) — daily maritime activity estimated from satellite AIS on ~90,000 ships, via the UN Global Platform. Free public use with attribution. Backfill covers 1 Jan 2023 – 23 Aug 2026.
+**Data source.** IMF PortWatch (portwatch.imf.org) — daily maritime activity estimated from satellite AIS on ~90,000 ships, via the UN Global Platform. Free public use with attribution. Backfill covers 1 Jan 2023 – 13 Sep 2026.
 
 **What the numbers are.** `n_total` / `n_container` / `n_tanker` are counts of vessel transits by class at chokepoint 6. `capacity_container` is the estimated aggregate cargo capacity of transiting container ships. `import_container` / `export_container` are PortWatch's modelled trade-volume estimates — directional, not measured TEU.
 

@@ -136,6 +136,8 @@ _BRIEF_SLUGS = (
     "hormuz_container_2026",
     "suez_redsea_2026",
     "horn_of_africa_2026",
+    "all_chokepoints_2026",
+    "djibouti_port_2026",
 )
 
 
