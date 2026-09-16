@@ -365,6 +365,7 @@ def status() -> None:
         ).fetchall()
     finally:
         con.close()
+    assert obs is not None  # SELECT count(*) always returns exactly one row
     console.print(f"db: {settings.db_path}")
     console.print(
         f"observations: {obs[0]:,}  dates: {obs[1]} .. {obs[2]}  entities: {obs[3]:,}"

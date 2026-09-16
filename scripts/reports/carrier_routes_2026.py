@@ -55,6 +55,50 @@ ROUTE_COLORS = [
     "#16a085", "#e67e22", "#2c3e50", "#f39c12",
 ]
 
+# A straight line between two ports on this basemap can cut across land
+# wherever the real sea route threads a strait or canal - a line drawn
+# without waypoints, e.g. Piraeus straight to Jeddah, crosses Egypt/the
+# Sinai instead of following the Suez Canal. Model the corridor as a chain
+# of basins connected by named chokepoints, and route any leg that crosses
+# a basin boundary through that chokepoint's real coordinates instead of
+# drawing it direct. Basins not listed here (a port this table doesn't
+# know) fall back to a direct line - better than crashing, and this is a
+# small illustrative seed set, not a routing engine.
+_BASIN_CHAIN = ["atlantic", "med", "red_sea", "gulf_aden_arabian", "persian_gulf"]
+_PORT_BASIN: dict[str, str] = {
+    "Tangier": "med", "Algeciras": "med", "Valencia": "med", "Barcelona": "med",
+    "La Spezia": "med", "Genoa": "med", "Vado Ligure": "med", "Koper": "med",
+    "Rijeka": "med", "Malta": "med", "Piraeus": "med", "Port Said": "med",
+    "Damietta": "med", "Fos": "med",
+    "Jeddah": "red_sea",
+    "Djibouti": "gulf_aden_arabian", "Salalah": "gulf_aden_arabian",
+    "Karachi": "gulf_aden_arabian", "Port Qasim": "gulf_aden_arabian",
+    "Mundra": "gulf_aden_arabian", "Nhava Sheva": "gulf_aden_arabian",
+    "Hazira": "gulf_aden_arabian", "Mangalore": "gulf_aden_arabian",
+    "Colombo": "gulf_aden_arabian",
+    "Jebel Ali": "persian_gulf", "Khalifa Port": "persian_gulf",
+    "Umm Qasr": "persian_gulf", "Shuaiba": "persian_gulf", "Jubail": "persian_gulf",
+}
+# [lon, lat] waypoint(s) for the chokepoint BETWEEN chain positions (i, i+1),
+# in low-to-high basin order - reversed automatically for the other direction.
+_CHOKEPOINT_WAYPOINTS: list[list[list[float]]] = [
+    [[-5.6, 35.95]],                          # atlantic <-> med: Strait of Gibraltar
+    [[32.35, 31.26], [32.55, 29.93]],         # med <-> red_sea: Suez Canal (Port Said -> Suez)
+    [[43.3, 12.6]],                           # red_sea <-> gulf_aden_arabian: Bab el-Mandeb
+    [[56.25, 26.6]],                          # gulf_aden_arabian <-> persian_gulf: Strait of Hormuz
+]
+
+
+def _waypoints_between(port_a: str, port_b: str) -> list[list[float]]:
+    """Chokepoint waypoints to insert sailing from `port_a` to `port_b`, in order."""
+    basin_a, basin_b = _PORT_BASIN.get(port_a), _PORT_BASIN.get(port_b)
+    if basin_a is None or basin_b is None or basin_a == basin_b:
+        return []
+    i_a, i_b = _BASIN_CHAIN.index(basin_a), _BASIN_CHAIN.index(basin_b)
+    lo, hi = min(i_a, i_b), max(i_a, i_b)
+    pts = [pt for boundary in range(lo, hi) for pt in _CHOKEPOINT_WAYPOINTS[boundary]]
+    return pts if i_a < i_b else list(reversed(pts))
+
 
 def main() -> None:
     ports = load_ports()
@@ -69,6 +113,7 @@ def main() -> None:
     for i, svc in enumerate(services):
         color = ROUTE_COLORS[i % len(ROUTE_COLORS)]
         legs: list[list[float]] = []
+        prev_port: str | None = None
         for call in svc.calls:
             coord = ports.get(call.port)
             if coord is None:
@@ -77,10 +122,13 @@ def main() -> None:
             if not geo_in_bbox(lon, lat, BASEMAP):
                 dropped_ports.add(call.port)
                 continue
+            if prev_port is not None:
+                legs.extend(_waypoints_between(prev_port, call.port))
             legs.append([lon, lat])
+            prev_port = call.port
             port_service_count[call.port] = port_service_count.get(call.port, 0) + 1
             if call.port not in map_points:
-                map_points[call.port] = {
+                point: dict[str, Any] = {
                     "name": call.port,
                     "lon": round(lon, 4),
                     "lat": round(lat, 4),
@@ -88,6 +136,13 @@ def main() -> None:
                     "pct": None,
                     "role": "waypoint",
                 }
+                # A right-extending label on a port near the frame's east edge
+                # (e.g. Colombo) runs off the visible plot and gets clipped -
+                # flip it to draw leftward, back into the frame, instead.
+                lo_lon, _, hi_lon, _ = _bmap["bbox"]
+                if lon > hi_lon - 0.15 * (hi_lon - lo_lon):
+                    point["labelSide"] = "left"
+                map_points[call.port] = point
         if len(legs) >= 2:
             routes.append({
                 "name": f"{svc.carrier} {svc.service}",

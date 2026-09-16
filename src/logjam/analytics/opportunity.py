@@ -130,7 +130,7 @@ def detect_opportunities(con: duckdb.DuckDBPyConnection) -> int:
             [metric, *ids, settings.baseline_min_observations],
         ).fetchall()
 
-        per_date: dict[dt.date, list[tuple]] = {}
+        per_date: dict[dt.date, list[tuple[Any, ...]]] = {}
         for r in rows:
             per_date.setdefault(r[0], []).append(r)
 

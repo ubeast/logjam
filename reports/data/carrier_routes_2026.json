@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated": "2026-09-16T00:48:04+00:00",
+    "generated": "2026-09-16T01:02:24+00:00",
     "data_source": "src/logjam/resources/carrier_routes.yaml (carrier network publications, fetched Sep 2026)",
     "basemap": "corridor"
   },
@@ -242,7 +242,8 @@
         "lat": 6.95,
         "delta": 0.0,
         "pct": null,
-        "role": "waypoint"
+        "role": "waypoint",
+        "labelSide": "left"
       },
       {
         "name": "Malta",
@@ -282,7 +283,8 @@
         "lat": 22.84,
         "delta": 0.0,
         "pct": null,
-        "role": "waypoint"
+        "role": "waypoint",
+        "labelSide": "left"
       },
       {
         "name": "Nhava Sheva",
@@ -290,7 +292,8 @@
         "lat": 18.95,
         "delta": 0.0,
         "pct": null,
-        "role": "waypoint"
+        "role": "waypoint",
+        "labelSide": "left"
       },
       {
         "name": "Hazira",
@@ -298,7 +301,8 @@
         "lat": 21.1,
         "delta": 0.0,
         "pct": null,
-        "role": "waypoint"
+        "role": "waypoint",
+        "labelSide": "left"
       },
       {
         "name": "Karachi",
@@ -322,7 +326,8 @@
         "lat": 12.92,
         "delta": 0.0,
         "pct": null,
-        "role": "waypoint"
+        "role": "waypoint",
+        "labelSide": "left"
       },
       {
         "name": "Jebel Ali",
@@ -375,6 +380,18 @@
             35.88
           ],
           [
+            32.35,
+            31.26
+          ],
+          [
+            32.55,
+            29.93
+          ],
+          [
+            43.3,
+            12.6
+          ],
+          [
             54.02,
             16.95
           ]
@@ -425,6 +442,18 @@
             31.42
           ],
           [
+            32.35,
+            31.26
+          ],
+          [
+            32.55,
+            29.93
+          ],
+          [
+            43.3,
+            12.6
+          ],
+          [
             79.85,
             6.95
           ]
@@ -451,8 +480,20 @@
             31.26
           ],
           [
+            32.35,
+            31.26
+          ],
+          [
+            32.55,
+            29.93
+          ],
+          [
             39.17,
             21.49
+          ],
+          [
+            43.3,
+            12.6
           ],
           [
             43.15,
@@ -501,6 +542,10 @@
             22.84
           ],
           [
+            56.25,
+            26.6
+          ],
+          [
             55.02,
             25.01
           ],
@@ -513,8 +558,16 @@
             30.03
           ],
           [
+            56.25,
+            26.6
+          ],
+          [
             67.01,
             24.85
+          ],
+          [
+            56.25,
+            26.6
           ],
           [
             48.15,

@@ -64,7 +64,9 @@ class GdeltUnavailable(RuntimeError):
     """The DOC API timed out or kept rate-limiting - a transient, retry-later state."""
 
 
-def _get(client: httpx.Client, query: str, mode: str, start: dt.date, end: dt.date) -> list[dict]:
+def _get(
+    client: httpx.Client, query: str, mode: str, start: dt.date, end: dt.date
+) -> list[dict[str, Any]]:
     """One DOC 2.0 timeline call -> its ``data`` list.
 
     Retries the API's 429s and its frequent timeouts a few times, then raises
@@ -99,7 +101,7 @@ def _get(client: httpx.Client, query: str, mode: str, start: dt.date, end: dt.da
     raise GdeltUnavailable(f"GDELT DOC API unreachable for mode={mode} query={query!r}")
 
 
-def _daily_volume(rows: list[dict]) -> dict[dt.date, float]:
+def _daily_volume(rows: list[dict[str, Any]]) -> dict[dt.date, float]:
     """Roll (possibly sub-daily) volraw points up to per-mille share per day."""
     hits: dict[dt.date, float] = defaultdict(float)
     total: dict[dt.date, float] = defaultdict(float)
@@ -110,7 +112,7 @@ def _daily_volume(rows: list[dict]) -> dict[dt.date, float]:
     return {d: 1000.0 * hits[d] / total[d] for d in hits if total[d] > 0}
 
 
-def _daily_tone(rows: list[dict]) -> dict[dt.date, float]:
+def _daily_tone(rows: list[dict[str, Any]]) -> dict[dt.date, float]:
     """Roll tone points up to a simple daily mean."""
     acc: dict[dt.date, list[float]] = defaultdict(list)
     for r in rows:

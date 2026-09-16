@@ -46,7 +46,7 @@ def query_all(
 
     with httpx.Client(timeout=timeout_s) as client:
         while True:
-            params = {
+            params: dict[str, str | int] = {
                 "where": where,
                 "outFields": out_fields,
                 "orderByFields": order_by,

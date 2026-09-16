@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import datetime as dt
 import shutil
+from typing import cast
 
 import duckdb
 import numpy as np
@@ -75,7 +76,7 @@ def _haversine_km(lat1: np.ndarray, lon1: np.ndarray, lat0: float, lon0: float) 
     dp = np.radians(lat1 - lat0)
     dl = np.radians(lon1 - lon0)
     a = np.sin(dp / 2) ** 2 + np.cos(p1) * np.cos(p0) * np.sin(dl / 2) ** 2
-    return 2 * 6371.0088 * np.arcsin(np.sqrt(a))
+    return cast(np.ndarray, 2 * 6371.0088 * np.arcsin(np.sqrt(a)))
 
 
 def _in_zone(df: pd.DataFrame, z: Zone) -> pd.DataFrame:

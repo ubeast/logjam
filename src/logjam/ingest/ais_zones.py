@@ -35,7 +35,9 @@ def _places() -> dict[str, dict[str, list[Any]]]:
 
 @lru_cache(maxsize=1)
 def _zone_config() -> dict[str, Any]:
-    return yaml.safe_load(settings.ais_zones_path.read_text())
+    data = yaml.safe_load(settings.ais_zones_path.read_text())
+    assert isinstance(data, dict)
+    return data
 
 
 @dataclass(frozen=True)
