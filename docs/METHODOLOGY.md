@@ -325,6 +325,10 @@ port-to-port shift, so they carry charts instead of a map for now (roadmap).
    `bottleneck_trailing_exclude_days` (2) days for this reason, same as
    `recovery`; a collapse confined to just those last couple of days won't be
    flagged as a bottleneck signal until it persists past that window.
+   `bottlenecks` also skips an isolated exact-zero day on a series that
+   normally runs at or above `bottleneck_zero_expected_min` (5) - a likely
+   reporting gap rather than a real stoppage - unless the zero persists into a
+   second day, which reads as a real closure instead.
 4. **Estimates, not measurements.** `import_*` / `export_*` are PortWatch models;
    `capacity_*` is derived from vessel particulars, not manifests. Directional,
    not exact.
