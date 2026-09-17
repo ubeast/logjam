@@ -221,8 +221,9 @@ set covers the major trade lanes; extend it for yours.
 - [x] Year-over-year baseline so sustained disruptions stay visible (`recovery`).
 - [x] Trailing-days guard: `bottlenecks` skips each series' most recent
       `bottleneck_trailing_exclude_days` days, same as `recovery`.
-- [ ] Treat a sudden exact-zero on a high-baseline series as missing data
-      (distinct from the trailing-days guard above).
+- [x] Treat a sudden exact-zero on a high-baseline series as missing data,
+      unless it persists into a second day (distinct from the trailing-days
+      guard above).
 - [x] AISStream adapter: sampled anchorage-queue + chokepoint-transit counts
       (`ais-collect` / `ais-reduce`; geofences in `resources/ais_zones.yaml`).
 - [ ] AIS for v1's geography: the free AISStream feed doesn't cover the Gulf /

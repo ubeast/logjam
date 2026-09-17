@@ -66,6 +66,43 @@ def test_recent_collapse_not_yet_flagged(con) -> None:
     assert detect_bottlenecks(con) == 0
 
 
+def test_isolated_zero_treated_as_missing_data(con) -> None:
+    # A single exact-zero day on an otherwise stable, high-baseline series -
+    # likely a reporting gap, not flagged, even once it's aged past the
+    # trailing-exclude window (the days before and after it are both normal).
+    values = (
+        [100.0, 98.0, 102.0, 101.0, 99.0] * 12
+        + [0.0]
+        + [100.0, 99.0, 101.0, 98.0, 100.0]
+    )
+    upsert_observations(con, _series("port1c", "AlphaC", values, "portcalls_container"))
+
+    compute_baselines(con)
+    assert detect_bottlenecks(con) == 0
+
+
+def test_sustained_zero_run_still_flagged(con) -> None:
+    # A zero that persists for more than one day is presumably a real closure
+    # (e.g. a canal blockage), not a reporting gap - flagged once it's more than
+    # a single day old, unlike the isolated-zero case above.
+    values = [100.0, 98.0, 102.0, 101.0, 99.0] * 12 + [0.0] * 5
+    upsert_observations(con, _series("port1d", "AlphaD", values, "portcalls_container"))
+
+    compute_baselines(con)
+    assert detect_bottlenecks(con) >= 1
+
+    dates = {
+        r[0]
+        for r in con.execute(
+            "SELECT obs_date FROM signal WHERE signal_type = 'bottleneck' "
+            "AND entity_id = 'port1d'"
+        ).fetchall()
+    }
+    first_zero_date = dt.date(2024, 1, 1) + dt.timedelta(days=60)
+    assert first_zero_date not in dates  # adjacent to a normal day - not flagged
+    assert dates  # but the run as a whole is
+
+
 def test_stable_series_produces_no_bottleneck(con) -> None:
     values = [100.0, 99.0, 101.0, 100.0, 100.0] * 14
     upsert_observations(con, _series("port2", "Beta", values, "portcalls"))

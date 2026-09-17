@@ -86,6 +86,14 @@ class Settings(BaseSettings):
     # rather than a real stoppage. Separate knob from `recovery_trailing_exclude_days`
     # (same default today, but the two features may want to diverge later).
     bottleneck_trailing_exclude_days: int = 2
+    # `detect_bottlenecks` treats an exact-zero day as a likely reporting gap
+    # (PortWatch dropping a day rather than a genuine stoppage) and skips flagging
+    # it, but only when: the series normally runs at least this level (below it, a
+    # real zero is plausible variation, not a red flag) AND the previous day's
+    # value wasn't also zero (a *sustained* run of zeros is presumably a real
+    # closure, e.g. a canal blockage, and should still be flagged from its second
+    # day onward).
+    bottleneck_zero_expected_min: float = 5.0
 
     # --- AISStream (live AIS) --------------------------------------------
     # A push WebSocket, not a batch pull. We *sample* it: connect for

@@ -41,6 +41,12 @@ def detect_bottlenecks(con: duckdb.DuckDBPyConnection) -> int:
     ``docs/METHODOLOGY.md`` known limitation #3). A collapse that persists past
     that window still gets flagged on its older, no-longer-trailing days.
 
+    An exact-zero day on a series that normally runs at least
+    ``bottleneck_zero_expected_min`` is treated as a likely reporting gap rather
+    than a real stoppage, and is skipped too - *unless* the previous day was also
+    zero, in which case the zero has become a sustained run (e.g. an actual canal
+    closure) and gets flagged like any other collapse.
+
     ``robust_z`` / ``expected`` on the signal row reflect whichever baseline
     triggered more strongly; ``detail.trigger`` records which fired.
     """
@@ -48,6 +54,7 @@ def detect_bottlenecks(con: duckdb.DuckDBPyConnection) -> int:
     min_obs = settings.baseline_min_observations
     yoy_min = settings.yoy_min_observations
     excl = settings.bottleneck_trailing_exclude_days
+    zero_min = settings.bottleneck_zero_expected_min
     like_clause = " OR ".join("b.metric LIKE ? ESCAPE '\\'" for _ in _BOTTLENECK_METRICS_LIKE)
 
     rows = con.execute(
@@ -56,24 +63,36 @@ def detect_bottlenecks(con: duckdb.DuckDBPyConnection) -> int:
             SELECT entity_type, entity_id, metric, max(obs_date) AS latest_date
             FROM baseline
             GROUP BY 1, 2, 3
+        ),
+        with_prior AS (
+            SELECT entity_type, entity_id, metric, obs_date,
+                   lag(value) OVER (
+                       PARTITION BY entity_type, entity_id, metric ORDER BY obs_date
+                   ) AS prior_value
+            FROM baseline
         )
         SELECT b.entity_type, b.entity_id, o.entity_name, b.metric, b.obs_date,
                b.value, b.expected, b.robust_z, b.n_obs,
                b.expected_yoy, b.robust_z_yoy, b.pct_of_yoy, b.n_obs_yoy
         FROM baseline b
         JOIN series_latest sl USING (entity_type, entity_id, metric)
+        JOIN with_prior p USING (entity_type, entity_id, metric, obs_date)
         JOIN (
             SELECT entity_type, entity_id, any_value(entity_name) AS entity_name
             FROM observation GROUP BY entity_type, entity_id
         ) o USING (entity_type, entity_id)
         WHERE ({like_clause})
           AND b.obs_date <= sl.latest_date - ?
+          AND NOT (
+                b.value = 0 AND b.expected >= ?
+                AND (p.prior_value IS NULL OR p.prior_value != 0)
+              )
           AND (
                 (b.robust_z <= ? AND b.n_obs >= ?)
              OR (b.robust_z_yoy <= ? AND b.n_obs_yoy >= ?)
           )
         """,
-        [*_BOTTLENECK_METRICS_LIKE, excl, -abs(z), min_obs, -abs(z), yoy_min],
+        [*_BOTTLENECK_METRICS_LIKE, excl, zero_min, -abs(z), min_obs, -abs(z), yoy_min],
     ).fetchall()
 
     con.execute("DELETE FROM signal WHERE signal_type = 'bottleneck'")
