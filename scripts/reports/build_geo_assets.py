@@ -10,12 +10,15 @@ pick up new PortWatch ports); commit the output.
     uv run --with shapely --with httpx python scripts/reports/build_geo_assets.py
 
 Outputs (committed, in ``src/logjam/resources/geo/``):
-    basemap_mideast.json
+    basemap_<name>.json   (one per entry in ``_BASEMAPS``)
         {bbox, land: <GeoJSON geometry>, borders: <GeoJSON geometry>, ...}
-        Land polygons + national boundary lines for the Gulf / Arabian Sea /
-        Red Sea / NW Indian Ocean window, clipped to `BBOX`, simplified, and
-        rounded to 3 decimal degrees (~110 m) to keep the embedded payload
-        small. Source: Natural Earth 10m (public domain). Used by the briefs.
+        Land polygons + national boundary lines clipped to the named window,
+        simplified, and rounded to 3 decimal degrees (~110 m) to keep the
+        embedded payload small. Source: Natural Earth 10m (public domain).
+        - ``mideast``  : Gulf / Arabian Sea / Red Sea / NW India (Hormuz brief)
+        - ``corridor`` : W Mediterranean to NW India, the Asia-Europe corridor
+                         (Suez brief)
+        - ``redsea``   : Suez to the Gulf of Aden + East African coast (Horn brief)
     portwatch_places.json
         {ports: {portid: [lon, lat]}, chokepoints: {id: [lon, lat]}, ...}
         Every PortWatch port and chokepoint, from the PortWatch "*_database"
@@ -38,11 +41,19 @@ from logjam.config import settings
 
 ASSETS_DIR = settings.geo_dir
 
-# minlon, minlat, maxlon, maxlat. Frames the Hormuz reroute story: the Egyptian
-# Mediterranean coast in the NW, the Gulf and the strait in the centre, and the
-# Indian subcontinent's west coast in the E. Deliberately tight so the map
-# renders large without a lot of empty ocean.
-BBOX: tuple[float, float, float, float] = (31.0, 8.0, 78.0, 32.0)
+# One clipped basemap per brief framing. minlon, minlat, maxlon, maxlat.
+#   mideast   - Hormuz brief: Egyptian Med coast NW, Gulf + strait centre, NW
+#               India E. Deliberately tight so the map renders large.
+#   corridor  - Suez brief: the Asia-Europe maritime corridor, W Mediterranean
+#               to NW India. A wide landscape strip; the Cape of Good Hope
+#               diversion runs off the south edge (its own chart).
+#   redsea    - Horn brief: Suez to the Gulf of Aden and the East African coast
+#               - tight on the Red Sea corridor where that brief's ports sit.
+_BASEMAPS: dict[str, tuple[float, float, float, float]] = {
+    "mideast": (31.0, 8.0, 78.0, 32.0),
+    "corridor": (-8.0, 5.0, 82.0, 42.0),
+    "redsea": (28.0, -8.0, 60.0, 33.0),
+}
 
 # Pinned Natural Earth release so a rebuild is deterministic.
 _NE_TAG = "v5.1.2"
@@ -71,20 +82,22 @@ def _round_coords(obj: Any) -> Any:
     return obj
 
 
-def _clip_and_simplify(geojson: dict[str, Any]) -> dict[str, Any]:
-    """Clip a GeoJSON FeatureCollection to `BBOX`, union, simplify, round."""
+def _clip_and_simplify(
+    geojson: dict[str, Any],
+    bbox: tuple[float, float, float, float],
+    tolerance: float = _SIMPLIFY_TOLERANCE_DEG,
+) -> dict[str, Any]:
+    """Clip a GeoJSON FeatureCollection to `bbox`, union, simplify, round."""
     from shapely.geometry import box, mapping, shape  # noqa: PLC0415 - build-only dep
     from shapely.ops import unary_union  # noqa: PLC0415
 
-    clip = box(*BBOX)
+    clip = box(*bbox)
     pieces = []
     for feat in geojson["features"]:
         geom = shape(feat["geometry"])
         if geom.intersects(clip):
             pieces.append(geom.intersection(clip))
-    merged = unary_union(pieces).simplify(
-        _SIMPLIFY_TOLERANCE_DEG, preserve_topology=True
-    )
+    merged = unary_union(pieces).simplify(tolerance, preserve_topology=True)
     return _round_coords(mapping(merged))
 
 
@@ -136,27 +149,31 @@ def main() -> None:
 
     with httpx.Client(timeout=_HTTP_TIMEOUT_S, follow_redirects=True) as client:
         print(f"Natural Earth {_NE_TAG}: land + boundary lines ...")
-        land = _clip_and_simplify(_fetch_json(client, _NE_LAND))
-        borders = _clip_and_simplify(_fetch_json(client, _NE_BORDERS))
+        ne_land = _fetch_json(client, _NE_LAND)
+        ne_borders = _fetch_json(client, _NE_BORDERS)
 
-        basemap = {
-            "_source": (
-                f"Natural Earth 10m ({_NE_TAG}), public domain, via "
-                "github.com/nvkelso/natural-earth-vector"
-            ),
-            "_built": stamp,
-            "_note": (
-                f"Clipped to bbox {BBOX}, unioned, simplified "
-                f"{_SIMPLIFY_TOLERANCE_DEG} deg, coords rounded to "
-                f"{_COORD_DECIMALS} dp. Rebuild with scripts/reports/build_geo_assets.py."
-            ),
-            "bbox": list(BBOX),
-            "land": land,
-            "borders": borders,
-        }
-        basemap_path = ASSETS_DIR / "basemap_mideast.json"
-        basemap_path.write_text(json.dumps(basemap, separators=(",", ":")))
-        print(f"  wrote {basemap_path.name}  ({basemap_path.stat().st_size // 1024} KB)")
+        for name, bbox in _BASEMAPS.items():
+            # A wide frame carries far more coastline and renders zoomed out, so
+            # coarsen it hard to keep the embedded payload small.
+            tol = _SIMPLIFY_TOLERANCE_DEG * (5.0 if (bbox[2] - bbox[0]) > 50 else 1.0)
+            basemap = {
+                "_source": (
+                    f"Natural Earth 10m ({_NE_TAG}), public domain, via "
+                    "github.com/nvkelso/natural-earth-vector"
+                ),
+                "_built": stamp,
+                "_note": (
+                    f"Clipped to bbox {bbox}, unioned, simplified {tol:g} deg, "
+                    f"coords rounded to {_COORD_DECIMALS} dp. "
+                    "Rebuild with scripts/reports/build_geo_assets.py."
+                ),
+                "bbox": list(bbox),
+                "land": _clip_and_simplify(ne_land, bbox, tol),
+                "borders": _clip_and_simplify(ne_borders, bbox, tol),
+            }
+            path = ASSETS_DIR / f"basemap_{name}.json"
+            path.write_text(json.dumps(basemap, separators=(",", ":")))
+            print(f"  wrote {path.name}  ({path.stat().st_size // 1024} KB)")
 
         print("PortWatch metadata layers: port + chokepoint coordinates ...")
         ports = _fetch_places(client, _PW_PORTS_DB)
