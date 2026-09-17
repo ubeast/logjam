@@ -37,8 +37,10 @@ def test_upsert_is_idempotent(con) -> None:
 
 
 def test_bottleneck_flagged_on_throughput_collapse(con) -> None:
-    # 60 stable days at ~100, then a hard drop to 10.
-    values = [100.0, 98.0, 102.0, 101.0, 99.0] * 12 + [10.0]
+    # 60 stable days at ~100, then a hard drop to 10 that persists past the
+    # trailing-exclude window (a single-day drop right at the series' latest
+    # date is deliberately not flagged - see test_recent_collapse_not_yet_flagged).
+    values = [100.0, 98.0, 102.0, 101.0, 99.0] * 12 + [10.0] * 5
     upsert_observations(con, _series("port1", "Alpha", values, "portcalls_container"))
 
     assert compute_baselines(con) > 0
@@ -51,6 +53,17 @@ def test_bottleneck_flagged_on_throughput_collapse(con) -> None:
     ).fetchone()
     assert row[0] == "portcalls_container"
     assert row[1] < 0  # collapse, not surge
+
+
+def test_recent_collapse_not_yet_flagged(con) -> None:
+    # Same collapse, but confined to the series' most recent
+    # `bottleneck_trailing_exclude_days` (2) days - PortWatch under-reports
+    # exactly this window, so it should not be flagged yet.
+    values = [100.0, 98.0, 102.0, 101.0, 99.0] * 12 + [10.0] * 2
+    upsert_observations(con, _series("port1b", "AlphaB", values, "portcalls_container"))
+
+    compute_baselines(con)
+    assert detect_bottlenecks(con) == 0
 
 
 def test_stable_series_produces_no_bottleneck(con) -> None:
@@ -101,7 +114,10 @@ def test_sustained_collapse_still_flags_via_year_over_year(con) -> None:
         "SELECT detail FROM signal WHERE signal_type='bottleneck' "
         "ORDER BY obs_date DESC LIMIT 1"
     ).fetchone()[0]
-    assert '"trigger": "yoy"' in trig
+    # yoy must be part of what fired (short alone can heal near the trailing
+    # edge, but the sustained collapse should still show up via yoy, whether
+    # or not short also happens to trip on that particular day).
+    assert '"trigger": "yoy"' in trig or '"trigger": "both"' in trig
 
     rec = recovery_status(con, "hormuz")
     assert rec and rec[0].verdict == SEVERE

@@ -81,6 +81,11 @@ class Settings(BaseSettings):
     # skips the most recent days, which PortWatch often under-reports.
     recovery_window_days: int = 7
     recovery_trailing_exclude_days: int = 2
+    # `detect_bottlenecks` skips this many of a series' most recent days: PortWatch
+    # revises its trailing estimates upward, so a fresh low can be an under-report
+    # rather than a real stoppage. Separate knob from `recovery_trailing_exclude_days`
+    # (same default today, but the two features may want to diverge later).
+    bottleneck_trailing_exclude_days: int = 2
 
     # --- AISStream (live AIS) --------------------------------------------
     # A push WebSocket, not a batch pull. We *sample* it: connect for

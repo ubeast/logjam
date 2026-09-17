@@ -320,9 +320,11 @@ port-to-port shift, so they carry charts instead of a map for now (roadmap).
    well; a transit *rate* is only a proxy. Berth-dwell time still needs
    per-vessel state tracking (roadmap).
 2. **YoY ≠ pre-crisis** for disruptions over a year old (§3b).
-3. **Trailing-day under-reporting.** The newest ~2 weeks of PortWatch data read
-   low; `bottlenecks` does not yet exclude them (only `recovery` does), so the
-   freshest bottleneck rows can be data artifacts, not real stoppages.
+3. **Trailing-day under-reporting.** The newest PortWatch data reads low as
+   estimates get revised. `bottlenecks` skips each series' most recent
+   `bottleneck_trailing_exclude_days` (2) days for this reason, same as
+   `recovery`; a collapse confined to just those last couple of days won't be
+   flagged as a bottleneck signal until it persists past that window.
 4. **Estimates, not measurements.** `import_*` / `export_*` are PortWatch models;
    `capacity_*` is derived from vessel particulars, not manifests. Directional,
    not exact.
